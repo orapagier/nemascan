@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Code Scanner - Multi Name</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qr-scanner/1.4.2/qr-scanner.umd.min.js"></script>
+    <title>nemascan</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -320,8 +320,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>📱 QR Scanner</h1>
-            <p>Scan QR code for attendance</p>
+            <h1>📱 nemascan</h1>
+            <p>Scan QR Code For Attendance</p>
         </div>
         
         <div class="scanner-section">
@@ -380,7 +380,7 @@
     <script>
         const API_URL = 'https://script.google.com/macros/s/AKfycbx0sSOg__B8UCbTzFGQmqXd0qihB5ord5hc14YFk-cY0br8d2Gp487SJ2G1t0hUoxrsVw/exec'; // Replace with your actual URL
         
-        let qrScanner = null;
+        let html5QrcodeScanner = null;
         let currentQRData = '';
         let selectedName = '';
         let selectedUniform = '';
@@ -388,20 +388,22 @@
 
         // Initialize QR Scanner
         function initScanner() {
-            const qrReaderElement = document.getElementById('qr-reader');
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.clear();
+            }
             
-            qrScanner = new QrScanner(
-                qrReaderElement,
-                result => onScanSuccess(result.data),
-                {
-                    onDecodeError: error => {
-                        // Silently handle decode errors - they're normal when scanning
-                    },
-                    preferredCamera: 'environment', // Use back camera on mobile
-                    highlightScanRegion: true,
-                    highlightCodeOutline: true,
-                    returnDetailedScanResult: true
-                }
+            html5QrcodeScanner = new Html5QrcodeScanner(
+                "qr-reader",
+                { 
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 },
+                    aspectRatio: 1.0,
+                    showTorchButtonIfSupported: true,
+                    showZoomSliderIfSupported: true,
+                    defaultZoomValueIfSupported: 2,
+                    disableFlip: false
+                },
+                false
             );
         }
 
@@ -410,11 +412,12 @@
             try {
                 showStatus('', ''); // Clear any previous status
                 
-                if (!qrScanner) {
+                if (!html5QrcodeScanner) {
                     initScanner();
                 }
 
-                await qrScanner.start();
+                // Start the scanner
+                html5QrcodeScanner.render(onScanSuccess, onScanFailure);
                 isScanning = true;
                 
                 // Hide start button and show stop button
@@ -432,25 +435,40 @@
                 // Ensure buttons are in correct state on error
                 document.getElementById('start-btn').classList.remove('hidden');
                 document.getElementById('stop-btn').classList.add('hidden');
+                isScanning = false;
             }
         }
 
         // Stop QR Scanner
         function stopScanner() {
-            if (qrScanner && isScanning) {
-                qrScanner.stop();
-                isScanning = false;
-                
-                // Show start button and hide stop button
-                document.getElementById('start-btn').classList.remove('hidden');
-                document.getElementById('stop-btn').classList.add('hidden');
-                
-                showStatus('⏹️ Scanner stopped', 'success');
+            if (html5QrcodeScanner && isScanning) {
+                html5QrcodeScanner.clear().then(() => {
+                    isScanning = false;
+                    
+                    // Show start button and hide stop button
+                    document.getElementById('start-btn').classList.remove('hidden');
+                    document.getElementById('stop-btn').classList.add('hidden');
+                    
+                    showStatus('⏹️ Scanner stopped', 'success');
+                }).catch(err => {
+                    console.error('Error stopping scanner:', err);
+                    isScanning = false;
+                    
+                    // Show start button and hide stop button even on error
+                    document.getElementById('start-btn').classList.remove('hidden');
+                    document.getElementById('stop-btn').classList.add('hidden');
+                });
             }
         }
 
+        // Handle scan failure (not necessarily an error)
+        function onScanFailure(error) {
+            // This is called when scanning fails, which is normal when no QR code is detected
+            // We don't need to do anything here
+        }
+
         // Handle successful QR scan
-        function onScanSuccess(decodedText) {
+        function onScanSuccess(decodedText, decodedResult) {
             if (!isScanning) return; // Ignore if scanner is stopped
 
             // Stop scanner after successful scan
@@ -620,8 +638,8 @@
 
         // Cleanup on page unload
         window.addEventListener('beforeunload', () => {
-            if (qrScanner) {
-                qrScanner.destroy();
+            if (html5QrcodeScanner && isScanning) {
+                html5QrcodeScanner.clear();
             }
         });
     </script>
