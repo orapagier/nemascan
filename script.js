@@ -1,5 +1,5 @@
 
-        const API_URL = 'https://script.google.com/macros/s/AKfycbzFF2y1oQA1ZEqrsRhUinKDiKiNX2rh-Hwgrr3pLKqZ4LKRbnHLiQm8Jb1lmgQtCC9vWQ/exec';
+        const API_URL = 'https://script.google.com/macros/s/AKfycbxtiVkqIqQDP-hWlCY-CJ2SExOiG6swdiS0oqq9xjgQYbJL6Te_zB3s_V_aVo1mC86kMQ/exec';
         
         let html5Qrcode = null;
         let currentQRData = '';
@@ -330,11 +330,30 @@
             });
             
             fetch(`${API_URL}?${params}`)
-                .then(response => response.json())
-                .then(data => {
-                    showToast(`Recorded: ${selectedName}`, 'success');
-                    closeModalSafely('uniform-modal');
-                    resetForm();
+                .then(response => {
+                    // First check if the response is OK (status 200-299)
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.text(); // First get as text
+                })
+                .then(text => {
+                    // Try to parse as JSON, fallback to text if fails
+                    try {
+                        const data = JSON.parse(text);
+                        showToast(`Recorded: ${selectedName}`, 'success');
+                        closeModalSafely('uniform-modal');
+                        resetForm();
+                    } catch (e) {
+                        // Handle non-JSON responses
+                        if (text.includes("Attendance recorded")) {
+                            showToast(`Recorded: ${selectedName}`, 'success');
+                            closeModalSafely('uniform-modal');
+                            resetForm();
+                        } else {
+                            throw new Error('Unexpected response format');
+                        }
+                    }
                 })
                 .catch(error => {
                     console.error('Save error:', error);
