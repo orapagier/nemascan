@@ -391,35 +391,27 @@
                             : JSON.parse(text);
                     } catch (e) {
                         console.log("Raw response:", text);
-                        // If parsing fails but we know the save works, show the name only
-                        showToast(`Attendance recorded for ${selectedName}`, 'success');
-                        closeModalSafely('uniform-modal');
-                        resetForm();
-                        return;
+                        throw new Error('Failed to parse response');
                     }
         
                     if (data && data.success === true) {
                         // Only show the message from the server if it exists
-                        if (data.message) {
-                            showToast(data.message, 'success');
-                        } else {
-                            showToast(`Attendance recorded for ${selectedName}`, 'success');
-                        }
-                        closeModalSafely('uniform-modal');
-                        resetForm();
+                        const toastMessage = data.message || `Attendance recorded for ${selectedName}`;
+                        showToast(toastMessage, 'success');
                     } else if (data && data.error) {
                         showToast(data.error, data.error.includes('Duplicate') ? 'warning' : 'error');
-                        closeModalSafely('uniform-modal');
-                        resetForm();
+                        throw new Error(data.error); // Prevent showing success message in catch
+                    } else {
+                        throw new Error('Unexpected response format');
                     }
                 })
                 .catch(error => {
                     console.error('Submission error:', error);
-                    showToast(`Attendance recorded for ${selectedName}`, 'success');
-                    closeModalSafely('uniform-modal');
-                    resetForm();
+                    // Don't show any toast here - we either already showed one or it's a genuine error
                 })
                 .finally(() => {
+                    closeModalSafely('uniform-modal');
+                    resetForm();
                     if (loadingElement) loadingElement.style.display = 'none';
                 });
         }
