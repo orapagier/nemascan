@@ -355,12 +355,12 @@
                     resetForm();
                 })
                 .catch(error => {
-                    console.error('Save error:', error);
-                    if (!error.message.includes('Unexpected response format')) {
-                        showToast('Save failed - please try again', 'error');
-                    }
+                    console.error('Save failed - Server response:', text);
+                    showLoading(false, 'uniform-modal');
                 })
-                .finally(() => {
+                .catch(error => {
+                    // Network errors (log only)
+                    console.error('Save failed - Error:', error);
                     showLoading(false, 'uniform-modal');
                 });
         }
