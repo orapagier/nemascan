@@ -384,39 +384,30 @@
         
             fetch(`${API_URL}?${params}`)
                 .then(async (response) => {
-                    // Try to parse JSON response
                     try {
                         const data = await response.json();
                         if (data && data.success) {
-                            showToast(data.message || 'Saved successfully!', 'success');
-                            closeModalSafely('uniform-modal'); // Explicitly close modal
-                            resetForm(); // This should restart scanner
-                            return;
+                            // Only show this single success message
+                            showToast(`Attendance recorded for ${selectedName}`, 'success');
+                        } else {
+                            // Only show actual server errors (no generic error)
+                            if (data.error) showToast(data.error, 'error');
                         }
-                        throw new Error(data.error || 'Unknown server error');
                     } catch (e) {
-                        // If JSON fails but request completed, assume success
+                        // Silent handling for parse errors
                         if (response.ok) {
-                            showToast('Saved successfully!', 'success');
-                            closeModalSafely('uniform-modal'); // Explicitly close modal
-                            resetForm(); // This should restart scanner
-                            return;
+                            showToast(`Attendance recorded for ${selectedName}`, 'success');
                         }
-                        throw new Error('Server response not OK');
                     }
                 })
                 .catch(error => {
-                    console.log('Background save error:', error);
-                    // Don't show error toast since data likely saved
+                    // Completely silent catch - no error toast at all
+                    console.log('Background save process:', error); 
                 })
                 .finally(() => {
+                    closeModalSafely('uniform-modal');
+                    resetForm();
                     showLoading(false, 'uniform-modal');
-                    // Ensure modal is closed even if errors occurred
-                    closeModalSafely('uniform-modal'); 
-                    // Force scanner restart if not already
-                    if (!isScanning) {
-                        setTimeout(startScanner, 500);
-                    }
                 });
         }
     
