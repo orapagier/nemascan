@@ -276,6 +276,11 @@
             padding: 20px;
         }
 
+        .modal-loading {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
         .name-list {
             display: grid;
             gap: 12px;
