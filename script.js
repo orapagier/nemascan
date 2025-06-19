@@ -1,5 +1,5 @@
 
-        const API_URL = 'https://script.google.com/macros/s/AKfycbxeshlQNmKHXFtChvjHn1ZvYI67LtmA4mYKyCJ5vAFQFYEkqTKYuywGFKGTnLi7KibdGQ/exec';
+        const API_URL = 'https://script.google.com/macros/s/AKfycbwNd_E5CYXQRmttn8uRcWcYLf8KrEHQDSx-1x571z-XtQ6lBgpkcK3ZO8lN7WWKH92LGw/exec';
         
         let html5Qrcode = null;
         let currentQRData = '';
