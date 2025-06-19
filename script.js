@@ -364,7 +364,7 @@
             // Automatically submit after a brief delay
             setTimeout(() => {
                 submitRecord();
-            }, 500);
+            }, 100);
         }
     
         // Submit record - Modified to only save selected name
@@ -378,7 +378,8 @@
             
             const params = new URLSearchParams({
                 action: 'save',
-                qrData: currentQRData,
+                date: new Date().toLocaleDateString(),
+                time: new Date().toLocaleTimeString(),
                 selectedName: selectedName,
                 uniformCompliance: selectedUniform
             });
@@ -402,7 +403,6 @@
                     showLoading(false, 'uniform-modal');
                 });
         }
-    
     
         // Safe modal closing function
         function closeModalSafely(modalId) {
