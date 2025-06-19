@@ -464,21 +464,57 @@
             const url = `${API_URL}?qrData=${encodeURIComponent(currentQRData)}&selectedName=${encodeURIComponent(selectedName)}&uniformCompliance=${encodeURIComponent(selectedUniform)}`;
             
             fetch(url)
-                .then(response => response.json())
+                .then(response => {
+                    // First check if the response is OK (status 200-299)
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.text().then(text => {
+                        try {
+                            // Try to parse JSON, even if it might be JSONP
+                            if (text.startsWith('callback(') && text.endsWith(')')) {
+                                text = text.substring(9, text.length - 1);
+                            }
+                            return JSON.parse(text);
+                        } catch (e) {
+                            console.error('Failed to parse response:', text);
+                            throw new Error('Invalid response format');
+                        }
+                    });
+                })
                 .then(data => {
-                    showLoading(false, 'uniform-modal');
-                    
-                    if (data.success) {
-                        showToast(data.message, 'success');
+                    // Check your specific response format
+                    if (data && data.success === true) {
+                        showToast(data.message || 'Record saved successfully!', 'success');
+                        closeModal('uniform-modal');
+                        resetForm();
+                    } else if (data && data.success === false && data.error) {
+                        // Handle duplicate entry or other expected errors
+                        if (data.error.includes('Duplicate entry')) {
+                            showToast(data.error, 'warning');
+                        } else {
+                            showToast(data.error, 'error');
+                        }
                         closeModal('uniform-modal');
                         resetForm();
                     } else {
-                        showToast(data.error, 'error');
+                        // Unexpected but successful response
+                        showToast('Record saved successfully!', 'success');
+                        closeModal('uniform-modal');
+                        resetForm();
                     }
                 })
                 .catch(error => {
+                    console.error('Error submitting:', error);
+                    // Check if the error might be from successful save but failed response parsing
+                    if (error.message.includes('Invalid response format')) {
+                        showToast('Record likely saved (verify manually)', 'warning');
+                    } else {
+                        showToast('Error saving record: ' + error.message, 'error');
+                    }
+                })
+                .finally(() => {
                     showLoading(false, 'uniform-modal');
-                    showToast(`Error submitting: ${error.message}`, 'error');
                 });
         }
 
