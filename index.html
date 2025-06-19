@@ -946,4 +946,54 @@
             
             // Auto-restart scanner after successful submission
             setTimeout(() => {
-                if (!
+                if (!isScanning) {
+                    startScanner();
+                }
+            }, 2000);
+        }
+
+        // Utility functions
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+            statusDiv.style.display = message ? 'block' : 'none';
+            
+            if (type === 'success' && message) {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 4000);
+            }
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', () => {
+            // Initialize cameras list but don't auto-start
+            getCameras().catch(console.error);
+        });
+
+        // Handle visibility change to restart scanner when page becomes visible
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && !isScanning) {
+                setTimeout(() => {
+                    if (!isScanning) {
+                        // Don't auto-restart, let user click the button
+                        console.log('Page visible again, ready to start scanner');
+                    }
+                }, 500);
+            }
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (html5Qrcode && isScanning) {
+                html5Qrcode.stop().catch(console.error);
+            }
+        });
+    </script>
+</body>
+</html>
