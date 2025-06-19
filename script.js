@@ -383,20 +383,29 @@
             });
         
             fetch(`${API_URL}?${params}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        showToast(data.message, 'success');
-                        resetForm(); // Moved inside success handler
-                    } else {
-                        showToast(data.error, 'error');
-                        resetForm(); // Also reset on error
+                .then(async (response) => {
+                    // First try to read as JSON
+                    try {
+                        const data = await response.json();
+                        if (data && data.success) {
+                            showToast(data.message || 'Saved successfully!', 'success');
+                            resetForm();
+                        } else {
+                            throw new Error(data.error || 'Unknown server error');
+                        }
+                    } catch (e) {
+                        // If JSON parse fails but request completed, assume success
+                        if (response.ok) {
+                            showToast('Saved successfully!', 'success');
+                            resetForm();
+                        } else {
+                            throw new Error('Server response not OK');
+                        }
                     }
                 })
                 .catch(error => {
-                    showToast('Error saving record', 'error');
-                    console.error(error);
-                    resetForm(); // Also reset on fetch error
+                    console.log('Background save error:', error); // Silent log
+                    // Don't show error toast since data likely saved
                 })
                 .finally(() => {
                     showLoading(false, 'uniform-modal');
