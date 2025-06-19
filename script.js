@@ -1,5 +1,5 @@
 
-        const API_URL = 'https://script.google.com/macros/s/AKfycbwNd_E5CYXQRmttn8uRcWcYLf8KrEHQDSx-1x571z-XtQ6lBgpkcK3ZO8lN7WWKH92LGw/exec';
+        const API_URL = 'https://script.google.com/macros/s/AKfycbzFF2y1oQA1ZEqrsRhUinKDiKiNX2rh-Hwgrr3pLKqZ4LKRbnHLiQm8Jb1lmgQtCC9vWQ/exec';
         
         let html5Qrcode = null;
         let currentQRData = '';
@@ -377,36 +377,22 @@
             
             const params = new URLSearchParams({
                 action: 'save',
-                qrData: currentQRData,
                 selectedName: selectedName,
                 uniformCompliance: selectedUniform
+                // Removed qrData since we're not checking duplicates
             });
         
             fetch(`${API_URL}?${params}`)
-                .then(async (response) => {
-                    try {
-                        const data = await response.json();
-                        if (data && data.success) {
-                            // Only show this single success message
-                            showToast(`Attendance recorded for ${selectedName}`, 'success');
-                        } else {
-                            // Only show actual server errors (no generic error)
-                            if (data.error) showToast(data.error, 'error');
-                        }
-                    } catch (e) {
-                        // Silent handling for parse errors
-                        if (response.ok) {
-                            showToast(`Attendance recorded for ${selectedName}`, 'success');
-                        }
-                    }
-                })
-                .catch(error => {
-                    // Completely silent catch - no error toast at all
-                    console.log('Background save process:', error); 
-                })
-                .finally(() => {
+                .then(response => response.json())
+                .then(data => {
+                    showToast(data.message || `Attendance recorded for ${selectedName}`, 'success');
                     closeModalSafely('uniform-modal');
                     resetForm();
+                })
+                .catch(error => {
+                    console.log('Background save:', error); // Silent error logging
+                })
+                .finally(() => {
                     showLoading(false, 'uniform-modal');
                 });
         }
