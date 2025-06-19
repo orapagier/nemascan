@@ -330,31 +330,35 @@
             });
             
             fetch(`${API_URL}?${params}`)
-                .then(response => {
-                    // First check HTTP status
-                    if (!response.ok) throw new Error('Network error');
+                .then(async response => {
+                    const text = await response.text();
                     
-                    // Handle both text and JSON responses
-                    return response.text().then(text => {
-                        try {
-                            return JSON.parse(text); // Case 1: Proper JSON
-                        } catch {
-                            return { success: text.includes("Attendance recorded") }; // Case 2: Text fallback
+                    // Case 1: Successful JSON response
+                    try {
+                        const data = JSON.parse(text);
+                        if (data.success || data.message.includes("Attendance recorded")) {
+                            return { success: true };
                         }
-                    });
-                })
-                .then(data => {
-                    if (data.success) {
-                        showToast(`Attendance for ${selectedName} recorded successfully`, 'success');
-                        closeModalSafely('uniform-modal');
-                        resetForm();
-                    } else {
-                        throw new Error('Save rejected by server');
+                    } catch (e) { /* Not JSON */ }
+                    
+                    // Case 2: Successful plain text response
+                    if (text.includes("Attendance recorded")) {
+                        return { success: true };
                     }
+                    
+                    // Case 3: Any other response
+                    throw new Error('Unexpected response format');
+                })
+                .then(() => {
+                    showToast(`Attendance for ${selectedName} recorded successfully`, 'success');
+                    closeModalSafely('uniform-modal');
+                    resetForm();
                 })
                 .catch(error => {
                     console.error('Save error:', error);
-                    showToast('Save failed - please try again', 'error');
+                    if (!error.message.includes('Unexpected response format')) {
+                        showToast('Save failed - please try again', 'error');
+                    }
                 })
                 .finally(() => {
                     showLoading(false, 'uniform-modal');
