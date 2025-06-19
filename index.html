@@ -52,27 +52,18 @@
             border-radius: 15px;
             overflow: hidden;
             box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            background: #f8f9fa;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        /* Hide the default camera selector dropdown */
-        #qr-reader select {
-            display: none !important;
-        }
-
-        #qr-reader button {
-            display: none !important;
-        }
-
-        #qr-reader__dashboard {
-            display: none !important;
-        }
-
-        #qr-reader__dashboard_section {
-            display: none !important;
-        }
-
-        #qr-reader__dashboard_section_csr {
-            display: none !important;
+        .scanner-placeholder {
+            color: #6c757d;
+            font-size: 16px;
+            text-align: center;
+            padding: 20px;
         }
 
         .scanner-controls {
@@ -357,7 +348,9 @@
         </div>
         
         <div class="scanner-section">
-            <div id="qr-reader"></div>
+            <div id="qr-reader">
+                <div class="scanner-placeholder">Click "Start Scanning" to begin</div>
+            </div>
             
             <div class="scanner-controls">
                 <button class="btn" id="start-btn" onclick="startScanner()">📷 Start Scanning</button>
@@ -419,14 +412,13 @@
     <script>
         const API_URL = 'https://script.google.com/macros/s/AKfycbx0sSOg__B8UCbTzFGQmqXd0qihB5ord5hc14YFk-cY0br8d2Gp487SJ2G1t0hUoxrsVw/exec'; // Replace with your actual URL
         
-        let html5QrcodeScanner = null;
+        let html5Qrcode = null;
         let currentQRData = '';
         let selectedName = '';
         let selectedUniform = '';
         let isScanning = false;
         let cameras = [];
         let currentCameraIndex = 0;
-        let autoStartAttempted = false;
 
         // Get available cameras
         async function getCameras() {
@@ -435,7 +427,6 @@
                 cameras = devices;
                 console.log('Available cameras:', cameras);
                 
-                // Show camera info
                 if (cameras.length > 0) {
                     updateCameraInfo(`Found ${cameras.length} camera(s)`);
                     
@@ -449,13 +440,14 @@
                     currentCameraIndex = backCameraIndex !== -1 ? backCameraIndex : 0;
                 } else {
                     updateCameraInfo('No cameras detected');
+                    throw new Error('No cameras found');
                 }
                 
                 return cameras;
             } catch (error) {
                 console.error('Error getting cameras:', error);
                 updateCameraInfo('Error detecting cameras');
-                return [];
+                throw error;
             }
         }
 
@@ -470,55 +462,6 @@
             setTimeout(() => {
                 cameraInfo.style.display = 'none';
             }, 3000);
-        }
-
-        // Initialize QR Scanner
-        function initScanner() {
-            if (html5QrcodeScanner) {
-                html5QrcodeScanner.clear().catch(console.error);
-            }
-            
-            const config = { 
-                fps: 10,
-                qrbox: { width: 250, height: 250 },
-                aspectRatio: 1.0,
-                showTorchButtonIfSupported: true,
-                showZoomSliderIfSupported: true,
-                defaultZoomValueIfSupported: 2,
-                disableFlip: false,
-                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
-                showViewfinder: true,
-                verbose: false
-            };
-
-            html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", config, false);
-            
-            // Hide the built-in UI elements after initialization
-            setTimeout(() => {
-                hideBuiltInControls();
-            }, 100);
-        }
-
-        // Hide built-in camera controls
-        function hideBuiltInControls() {
-            const selectors = [
-                '#qr-reader select',
-                '#qr-reader button',
-                '#qr-reader__dashboard',
-                '#qr-reader__dashboard_section',
-                '#qr-reader__dashboard_section_csr',
-                '#qr-reader__scan_region__camera_selection',
-                '#qr-reader__cam_qr_result'
-            ];
-            
-            selectors.forEach(selector => {
-                const elements = document.querySelectorAll(selector);
-                elements.forEach(el => {
-                    if (el) {
-                        el.style.display = 'none';
-                    }
-                });
-            });
         }
 
         // Switch camera
@@ -539,7 +482,7 @@
             
             // Get camera type for display
             const cameraType = getCameraType(currentCamera);
-            updateCameraInfo(`Switched to ${cameraType} camera`);
+            updateCameraInfo(`Switching to ${cameraType} camera`);
             
             // Restart scanner with new camera
             setTimeout(() => {
@@ -572,31 +515,37 @@
                     updateCameraInfo('Getting camera list...');
                     await getCameras();
                 }
-                
-                if (cameras.length === 0) {
-                    throw new Error('No cameras found');
+
+                // Initialize Html5Qrcode instance
+                if (html5Qrcode) {
+                    await html5Qrcode.stop();
+                    html5Qrcode = null;
                 }
 
-                initScanner();
+                html5Qrcode = new Html5Qrcode("qr-reader");
 
-                // Get current camera info
+                // Get current camera
                 const currentCamera = cameras[currentCameraIndex];
                 const cameraType = getCameraType(currentCamera);
                 
                 updateCameraInfo(`Starting ${cameraType} camera...`);
 
-                // Start the scanner with specific camera
-                const cameraId = currentCamera.id;
-                html5QrcodeScanner.render(
-                    onScanSuccess, 
-                    onScanFailure,
-                    cameraId
+                // Configuration for the scanner
+                const config = {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 },
+                    aspectRatio: 1.0,
+                    showTorchButtonIfSupported: true,
+                    disableFlip: false,
+                };
+
+                // Start scanning with the selected camera
+                await html5Qrcode.start(
+                    currentCamera.id,
+                    config,
+                    onScanSuccess,
+                    onScanFailure
                 );
-                
-                // Hide built-in controls after render
-                setTimeout(() => {
-                    hideBuiltInControls();
-                }, 500);
                 
                 isScanning = true;
                 
@@ -617,6 +566,9 @@
                 document.getElementById('start-btn').classList.remove('hidden');
                 document.getElementById('stop-btn').classList.add('hidden');
                 isScanning = false;
+                
+                // Reset qr-reader div content
+                document.getElementById('qr-reader').innerHTML = '<div class="scanner-placeholder">Camera failed to start</div>';
             }
         }
 
@@ -628,25 +580,19 @@
         }
 
         // Stop QR Scanner
-        function stopScanner() {
-            return new Promise((resolve) => {
-                if (html5QrcodeScanner && isScanning) {
-                    html5QrcodeScanner.clear().then(() => {
-                        isScanning = false;
-                        updateUI();
-                        showStatus('⏹️ Scanner stopped', 'success');
-                        resolve();
-                    }).catch(err => {
-                        console.error('Error stopping scanner:', err);
-                        isScanning = false;
-                        updateUI();
-                        resolve();
-                    });
-                } else {
-                    updateUI();
-                    resolve();
+        async function stopScanner() {
+            if (html5Qrcode && isScanning) {
+                try {
+                    await html5Qrcode.stop();
+                    document.getElementById('qr-reader').innerHTML = '<div class="scanner-placeholder">Scanner stopped</div>';
+                    showStatus('⏹️ Scanner stopped', 'success');
+                } catch (error) {
+                    console.error('Error stopping scanner:', error);
                 }
-            });
+            }
+            
+            isScanning = false;
+            updateUI();
         }
 
         // Update UI after stopping scanner
@@ -822,24 +768,10 @@
             document.getElementById('loading').style.display = show ? 'block' : 'none';
         }
 
-        // Auto-start scanner when page loads
-        async function autoStartScanner() {
-            if (autoStartAttempted) return;
-            autoStartAttempted = true;
-            
-            try {
-                updateCameraInfo('Auto-starting scanner...');
-                await startScanner();
-            } catch (error) {
-                console.error('Auto-start failed:', error);
-                updateCameraInfo('Auto-start failed, click Start Scanner');
-            }
-        }
-
         // Initialize when page loads
         window.addEventListener('load', () => {
-            // Give the page a moment to fully load, then auto-start
-            setTimeout(autoStartScanner, 1000);
+            // Initialize cameras list but don't auto-start
+            getCameras().catch(console.error);
         });
 
         // Handle visibility change to restart scanner when page becomes visible
@@ -847,7 +779,8 @@
             if (!document.hidden && !isScanning) {
                 setTimeout(() => {
                     if (!isScanning) {
-                        startScanner();
+                        // Don't auto-restart, let user click the button
+                        console.log('Page visible again, ready to start scanner');
                     }
                 }, 500);
             }
@@ -855,8 +788,8 @@
 
         // Cleanup on page unload
         window.addEventListener('beforeunload', () => {
-            if (html5QrcodeScanner && isScanning) {
-                html5QrcodeScanner.clear();
+            if (html5Qrcode && isScanning) {
+                html5Qrcode.stop().catch(console.error);
             }
         });
     </script>
