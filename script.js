@@ -1,5 +1,5 @@
 
-        const API_URL = 'https://script.google.com/macros/s/AKfycbx0sSOg__B8UCbTzFGQmqXd0qihB5ord5hc14YFk-cY0br8d2Gp487SJ2G1t0hUoxrsVw/exec';
+        const API_URL = 'https://script.google.com/macros/s/AKfycbxeshlQNmKHXFtChvjHn1ZvYI67LtmA4mYKyCJ5vAFQFYEkqTKYuywGFKGTnLi7KibdGQ/exec';
         
         let html5Qrcode = null;
         let currentQRData = '';
@@ -275,33 +275,34 @@
             processQRData(decodedText);
         }
     
-        // Process QR code data
         function processQRData(qrData) {
             currentQRData = qrData;
             showLoading(true, 'name-modal');
             
-            fetch(`${API_URL}?qrData=${encodeURIComponent(qrData)}`)
+            fetch(`${API_URL}?action=parse&qrData=${encodeURIComponent(qrData)}`)
                 .then(response => response.json())
                 .then(data => {
                     showLoading(false, 'name-modal');
                     
-                    if (data.multipleNames) {
-                        displayNameSelection(data.names);
-                    } else if (data.singleName) {
-                        selectedName = data.name;
-                        showUniformModal();
-                    } else if (data.error) {
-                        showToast(data.error, 'error');
+                    if (data.success) {
+                        if (data.multipleNames) {
+                            displayNameSelection(data.names);
+                        } else if (data.singleName) {
+                            selectedName = data.name;
+                            showUniformModal();
+                        }
                     } else {
-                        showToast('No names found in QR code', 'error');
+                        showToast(data.error || 'Invalid QR data', 'error');
                     }
                 })
                 .catch(error => {
                     showLoading(false, 'name-modal');
-                    showToast(`Error processing QR code: ${error.message}`, 'error');
+                    showToast('Error processing QR code', 'error');
+                    console.error(error);
                 });
         }
-    
+        
+
         // Display name selection modal
         function displayNameSelection(names) {
             const nameList = document.getElementById('name-list');
@@ -366,55 +367,42 @@
             }, 500);
         }
     
-        // Submit record
+        // Submit record - Modified to only save selected name
         function submitRecord() {
             if (!selectedName || !selectedUniform) {
-                showToast('Please select name and uniform compliance', 'error');
+                showToast('Please complete selection', 'error');
                 return;
             }
         
-            const loadingElement = document.getElementById('uniform-modal-loading');
-            if (loadingElement) loadingElement.style.display = 'flex';
+            showLoading(true, 'uniform-modal');
+            
+            const params = new URLSearchParams({
+                action: 'save',
+                qrData: currentQRData,
+                selectedName: selectedName,
+                uniformCompliance: selectedUniform
+            });
         
-            const url = `${API_URL}?qrData=${encodeURIComponent(currentQRData)}&selectedName=${encodeURIComponent(selectedName)}&uniformCompliance=${encodeURIComponent(selectedUniform)}`;
-        
-            fetch(url)
-                .then(response => {
-                    if (!response.ok) throw new Error('Network error');
-                    return response.text();
-                })
-                .then(text => {
-                    let data;
-                    try {
-                        data = text.startsWith('callback(') 
-                            ? JSON.parse(text.slice(9, -1))
-                            : JSON.parse(text);
-                    } catch (e) {
-                        console.log("Raw response:", text);
-                        throw new Error('Failed to parse response');
-                    }
-        
-                    if (data && data.success === true) {
-                        // Only show the message from the server if it exists
-                        const toastMessage = data.message || `Attendance recorded for ${selectedName}`;
-                        showToast(toastMessage, 'success');
-                    } else if (data && data.error) {
-                        showToast(data.error, data.error.includes('Duplicate') ? 'warning' : 'error');
-                        throw new Error(data.error); // Prevent showing success message in catch
+            fetch(`${API_URL}?${params}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast(data.message, 'success');
                     } else {
-                        throw new Error('Unexpected response format');
+                        showToast(data.error, 'error');
                     }
                 })
                 .catch(error => {
-                    console.error('Submission error:', error);
-                    // Don't show any toast here - we either already showed one or it's a genuine error
+                    showToast('Error saving record', 'error');
+                    console.error(error);
                 })
                 .finally(() => {
                     closeModalSafely('uniform-modal');
                     resetForm();
-                    if (loadingElement) loadingElement.style.display = 'none';
+                    showLoading(false, 'uniform-modal');
                 });
         }
+    
     
         // Safe modal closing function
         function closeModalSafely(modalId) {
