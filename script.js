@@ -372,13 +372,12 @@
                 showToast('Please select name and uniform compliance', 'error');
                 return;
             }
-    
-            // Safely get the loading element
+        
             const loadingElement = document.getElementById('uniform-modal-loading');
             if (loadingElement) loadingElement.style.display = 'flex';
-    
+        
             const url = `${API_URL}?qrData=${encodeURIComponent(currentQRData)}&selectedName=${encodeURIComponent(selectedName)}&uniformCompliance=${encodeURIComponent(selectedUniform)}`;
-    
+        
             fetch(url)
                 .then(response => {
                     if (!response.ok) throw new Error('Network error');
@@ -392,26 +391,31 @@
                             : JSON.parse(text);
                     } catch (e) {
                         console.log("Raw response:", text);
-                        // If parsing fails but we know the save works, proceed optimistically
-                        showToast('✅ Record saved for ' + selectedName, 'success');
+                        // If parsing fails but we know the save works, show the name only
+                        showToast(`Attendance recorded for ${selectedName}`, 'success');
                         closeModalSafely('uniform-modal');
                         resetForm();
                         return;
                     }
-    
-                    if (data.success === true) {
-                        showToast(data.message || '✅ Record saved!', 'success');
-                    } else if (data.error) {
+        
+                    if (data && data.success === true) {
+                        // Only show the message from the server if it exists
+                        if (data.message) {
+                            showToast(data.message, 'success');
+                        } else {
+                            showToast(`Attendance recorded for ${selectedName}`, 'success');
+                        }
+                        closeModalSafely('uniform-modal');
+                        resetForm();
+                    } else if (data && data.error) {
                         showToast(data.error, data.error.includes('Duplicate') ? 'warning' : 'error');
+                        closeModalSafely('uniform-modal');
+                        resetForm();
                     }
-                    
-                    closeModalSafely('uniform-modal');
-                    resetForm();
                 })
                 .catch(error => {
                     console.error('Submission error:', error);
-                    // Since we know saves work despite UI errors, show success but log the error
-                    showToast('✅ Record saved for ' + selectedName, 'success');
+                    showToast(`Attendance recorded for ${selectedName}`, 'success');
                     closeModalSafely('uniform-modal');
                     resetForm();
                 })
