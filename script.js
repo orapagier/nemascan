@@ -366,8 +366,13 @@
                 submitRecord();
             }, 100);
         }
-    
+
+        let lastScanTime = 0;
+
         function submitRecord() {
+            // Prevent rapid duplicate submissions
+            if (Date.now() - lastScanTime < 2000) return;
+            lastScanTime = Date.now();
             if (!selectedName || !selectedUniform) {
                 showToast('Please complete selection', 'error');
                 return;
