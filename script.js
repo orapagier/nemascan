@@ -384,31 +384,39 @@
         
             fetch(`${API_URL}?${params}`)
                 .then(async (response) => {
-                    // First try to read as JSON
+                    // Try to parse JSON response
                     try {
                         const data = await response.json();
                         if (data && data.success) {
                             showToast(data.message || 'Saved successfully!', 'success');
-                            resetForm();
-                        } else {
-                            throw new Error(data.error || 'Unknown server error');
+                            closeModalSafely('uniform-modal'); // Explicitly close modal
+                            resetForm(); // This should restart scanner
+                            return;
                         }
+                        throw new Error(data.error || 'Unknown server error');
                     } catch (e) {
-                        // If JSON parse fails but request completed, assume success
+                        // If JSON fails but request completed, assume success
                         if (response.ok) {
                             showToast('Saved successfully!', 'success');
-                            resetForm();
-                        } else {
-                            throw new Error('Server response not OK');
+                            closeModalSafely('uniform-modal'); // Explicitly close modal
+                            resetForm(); // This should restart scanner
+                            return;
                         }
+                        throw new Error('Server response not OK');
                     }
                 })
                 .catch(error => {
-                    console.log('Background save error:', error); // Silent log
+                    console.log('Background save error:', error);
                     // Don't show error toast since data likely saved
                 })
                 .finally(() => {
                     showLoading(false, 'uniform-modal');
+                    // Ensure modal is closed even if errors occurred
+                    closeModalSafely('uniform-modal'); 
+                    // Force scanner restart if not already
+                    if (!isScanning) {
+                        setTimeout(startScanner, 500);
+                    }
                 });
         }
     
