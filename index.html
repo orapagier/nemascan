@@ -103,6 +103,16 @@
             display: none;
         }
 
+        .camera-status {
+            margin: 10px 0;
+            padding: 8px 16px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 20px;
+            font-size: 12px;
+            color: #667eea;
+            display: none;
+        }
+
         .scan-result {
             margin: 20px;
             padding: 15px;
@@ -299,6 +309,17 @@
             display: none;
         }
 
+        .permission-prompt {
+            background: #e8f4fd;
+            color: #1976D2;
+            border: 2px solid #2196F3;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px;
+            text-align: center;
+            display: none;
+        }
+
         @media (max-width: 480px) {
             .container {
                 margin: 10px;
@@ -325,10 +346,18 @@
         </div>
         
         <div class="scanner-section">
+            <div class="permission-prompt" id="permission-prompt">
+                <h4>📷 Camera Permission Required</h4>
+                <p>Please allow camera access to start scanning automatically</p>
+                <button class="btn" onclick="requestCameraPermission()">Allow Camera</button>
+            </div>
+
             <div id="qr-reader"></div>
             
+            <div class="camera-status" id="camera-status"></div>
+            
             <div class="scanner-controls">
-                <button class="btn" id="start-btn" onclick="startScanner()">Start Scanner</button>
+                <button class="btn hidden" id="start-btn" onclick="startScanner()">Start Scanner</button>
                 <button class="btn secondary hidden" id="stop-btn" onclick="stopScanner()">Stop Scanner</button>
                 <button class="btn secondary hidden" id="camera-switch-btn" onclick="switchCamera()">🔄 Switch Camera</button>
             </div>
@@ -388,34 +417,126 @@
         let isScanning = false;
         let cameras = [];
         let currentCameraIndex = 0;
-        let preferBackCamera = true;
+        let permissionGranted = false;
+        let autoStartAttempted = false;
 
-        // Get available cameras
-        async function getCameras() {
+        // Request camera permission
+        async function requestCameraPermission() {
+            try {
+                document.getElementById('permission-prompt').style.display = 'none';
+                showLoading(true);
+                
+                // Request camera access
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                stream.getTracks().forEach(track => track.stop()); // Stop the stream immediately
+                
+                permissionGranted = true;
+                showLoading(false);
+                await initializeCamera();
+                
+            } catch (error) {
+                showLoading(false);
+                console.error('Permission denied:', error);
+                document.getElementById('camera-error').style.display = 'block';
+                document.getElementById('start-btn').classList.remove('hidden');
+                showStatus('❌ Camera permission denied', 'error');
+            }
+        }
+
+        // Initialize camera and get available cameras
+        async function initializeCamera() {
             try {
                 const devices = await Html5Qrcode.getCameras();
                 cameras = devices;
                 
-                // Try to find back camera and set as default
-                if (cameras.length > 0) {
-                    const backCameraIndex = cameras.findIndex(camera => 
-                        camera.label.toLowerCase().includes('back') || 
-                        camera.label.toLowerCase().includes('rear') ||
-                        camera.label.toLowerCase().includes('environment')
-                    );
-                    
-                    if (backCameraIndex !== -1) {
-                        currentCameraIndex = backCameraIndex;
-                    } else {
-                        currentCameraIndex = 0; // Use first camera if no back camera found
-                    }
+                if (cameras.length === 0) {
+                    throw new Error('No cameras found');
                 }
                 
-                console.log('Available cameras:', cameras);
-                return cameras;
+                // Find the best camera (prefer back camera)
+                findBestCamera();
+                
+                // Auto-start scanning
+                await startScanner();
+                
             } catch (error) {
-                console.error('Error getting cameras:', error);
-                return [];
+                console.error('Error initializing camera:', error);
+                document.getElementById('camera-error').style.display = 'block';
+                document.getElementById('start-btn').classList.remove('hidden');
+                showStatus('❌ Failed to initialize camera: ' + error.message, 'error');
+            }
+        }
+
+        // Find the best camera to use
+        function findBestCamera() {
+            if (cameras.length === 0) return;
+            
+            // Look for back/rear/environment camera
+            let backCameraIndex = cameras.findIndex(camera => {
+                const label = camera.label.toLowerCase();
+                return label.includes('back') || 
+                       label.includes('rear') || 
+                       label.includes('environment') ||
+                       label.includes('main');
+            });
+            
+            // If no back camera found, look for camera with higher resolution or specific patterns
+            if (backCameraIndex === -1) {
+                backCameraIndex = cameras.findIndex(camera => {
+                    const label = camera.label.toLowerCase();
+                    return !label.includes('front') && 
+                           !label.includes('user') && 
+                           !label.includes('selfie');
+                });
+            }
+            
+            // Use back camera if found, otherwise use first camera
+            currentCameraIndex = backCameraIndex !== -1 ? backCameraIndex : 0;
+            
+            console.log('Selected camera:', cameras[currentCameraIndex]);
+        }
+
+        // Switch to next available camera
+        async function switchCamera() {
+            if (cameras.length <= 1) {
+                showStatus('⚠️ Only one camera available', 'error');
+                return;
+            }
+            
+            // Stop current scanner
+            if (isScanning) {
+                await stopScanner();
+            }
+            
+            // Switch to next camera
+            currentCameraIndex = (currentCameraIndex + 1) % cameras.length;
+            updateCameraStatus();
+            
+            // Restart scanner with new camera
+            setTimeout(async () => {
+                await startScanner();
+            }, 500);
+        }
+
+        // Update camera status display
+        function updateCameraStatus() {
+            if (cameras.length > 0) {
+                const currentCamera = cameras[currentCameraIndex];
+                const label = currentCamera.label || `Camera ${currentCameraIndex + 1}`;
+                const isBack = label.toLowerCase().includes('back') || 
+                              label.toLowerCase().includes('rear') || 
+                              label.toLowerCase().includes('environment') ||
+                              label.toLowerCase().includes('main');
+                
+                const statusEl = document.getElementById('camera-status');
+                statusEl.textContent = `📷 Using: ${isBack ? 'Back' : 'Front'} Camera${cameras.length > 1 ? ` (${currentCameraIndex + 1}/${cameras.length})` : ''}`;
+                statusEl.style.display = 'block';
+                
+                // Show camera switch button only if multiple cameras
+                const switchBtn = document.getElementById('camera-switch-btn');
+                if (cameras.length > 1) {
+                    switchBtn.classList.remove('hidden');
+                }
             }
         }
 
@@ -436,39 +557,12 @@
                 supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
             };
 
-            // Add camera constraint if we have cameras available
-            if (cameras.length > 0) {
+            // Use specific camera if available
+            if (cameras.length > 0 && cameras[currentCameraIndex]) {
                 config.cameraIdOrConfig = cameras[currentCameraIndex].id;
             }
             
             html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", config, false);
-        }
-
-        // Switch camera
-        async function switchCamera() {
-            if (cameras.length <= 1) {
-                showStatus('⚠️ Only one camera available', 'error');
-                return;
-            }
-            
-            // Stop current scanner
-            if (isScanning) {
-                await stopScanner();
-            }
-            
-            // Switch to next camera
-            currentCameraIndex = (currentCameraIndex + 1) % cameras.length;
-            const currentCamera = cameras[currentCameraIndex];
-            const isBackCamera = currentCamera.label.toLowerCase().includes('back') || 
-                                currentCamera.label.toLowerCase().includes('rear') ||
-                                currentCamera.label.toLowerCase().includes('environment');
-            
-            showStatus(`📷 Switched to ${isBackCamera ? 'back' : 'front'} camera`, 'success');
-            
-            // Restart scanner with new camera
-            setTimeout(() => {
-                startScanner();
-            }, 500);
         }
 
         // Start QR Scanner
@@ -476,36 +570,27 @@
             try {
                 showStatus('', ''); // Clear any previous status
                 
-                // Get cameras if not already retrieved
-                if (cameras.length === 0) {
-                    await getCameras();
-                }
-                
                 initScanner();
 
                 // Start the scanner
                 html5QrcodeScanner.render(onScanSuccess, onScanFailure);
                 isScanning = true;
                 
-                // Hide start button and show stop button
+                // Update UI
                 document.getElementById('start-btn').classList.add('hidden');
                 document.getElementById('stop-btn').classList.remove('hidden');
-                document.getElementById('camera-switch-btn').classList.remove('hidden');
                 document.getElementById('camera-error').style.display = 'none';
+                document.getElementById('permission-prompt').style.display = 'none';
                 
-                const currentCamera = cameras[currentCameraIndex];
-                const isBackCamera = currentCamera && (currentCamera.label.toLowerCase().includes('back') || 
-                                    currentCamera.label.toLowerCase().includes('rear') ||
-                                    currentCamera.label.toLowerCase().includes('environment'));
-                
-                showStatus(`📷 Scanner active (${isBackCamera ? 'back' : 'front'} camera) - point at QR code`, 'success');
+                updateCameraStatus();
+                showStatus('✅ Scanner active - point at QR code', 'success');
                 
             } catch (error) {
                 console.error('Scanner start error:', error);
                 document.getElementById('camera-error').style.display = 'block';
                 showStatus('❌ Failed to start camera: ' + error.message, 'error');
                 
-                // Ensure buttons are in correct state on error
+                // Reset UI on error
                 document.getElementById('start-btn').classList.remove('hidden');
                 document.getElementById('stop-btn').classList.add('hidden');
                 document.getElementById('camera-switch-btn').classList.add('hidden');
@@ -520,10 +605,11 @@
                     html5QrcodeScanner.clear().then(() => {
                         isScanning = false;
                         
-                        // Show start button and hide stop/switch buttons
+                        // Update UI
                         document.getElementById('start-btn').classList.remove('hidden');
                         document.getElementById('stop-btn').classList.add('hidden');
                         document.getElementById('camera-switch-btn').classList.add('hidden');
+                        document.getElementById('camera-status').style.display = 'none';
                         
                         showStatus('⏹️ Scanner stopped', 'success');
                         resolve();
@@ -531,10 +617,11 @@
                         console.error('Error stopping scanner:', err);
                         isScanning = false;
                         
-                        // Show start button and hide stop/switch buttons even on error
+                        // Update UI even on error
                         document.getElementById('start-btn').classList.remove('hidden');
                         document.getElementById('stop-btn').classList.add('hidden');
                         document.getElementById('camera-switch-btn').classList.add('hidden');
+                        document.getElementById('camera-status').style.display = 'none';
                         resolve();
                     });
                 } else {
@@ -685,9 +772,9 @@
             selectedUniform = '';
             
             // Auto-restart scanner after successful submission
-            setTimeout(() => {
-                if (!isScanning) {
-                    startScanner();
+            setTimeout(async () => {
+                if (!isScanning && permissionGranted) {
+                    await startScanner();
                 }
             }, 2000);
         }
@@ -710,12 +797,41 @@
             document.getElementById('loading').style.display = show ? 'block' : 'none';
         }
 
-        // Initialize scanner on page load
-        window.addEventListener('load', () => {
-            // Auto-start scanner if camera is available
-            setTimeout(() => {
-                startScanner();
-            }, 1000);
+        // Check if camera permission is already granted
+        async function checkCameraPermission() {
+            try {
+                if (navigator.permissions) {
+                    const permission = await navigator.permissions.query({ name: 'camera' });
+                    if (permission.state === 'granted') {
+                        permissionGranted = true;
+                        await initializeCamera();
+                        return true;
+                    }
+                }
+                
+                // Fallback: try to access camera directly
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                stream.getTracks().forEach(track => track.stop());
+                permissionGranted = true;
+                await initializeCamera();
+                return true;
+                
+            } catch (error) {
+                // Permission not granted, show prompt
+                document.getElementById('permission-prompt').style.display = 'block';
+                return false;
+            }
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', async () => {
+            // Small delay to ensure DOM is ready
+            setTimeout(async () => {
+                if (!autoStartAttempted) {
+                    autoStartAttempted = true;
+                    await checkCameraPermission();
+                }
+            }, 500);
         });
 
         // Cleanup on page unload
