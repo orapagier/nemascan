@@ -471,23 +471,50 @@
                 return;
             }
             
-            // Stop current scanner
-            if (isScanning) {
-                await stopScanner();
+            try {
+                // Disable the switch button to prevent multiple clicks
+                const switchBtn = document.getElementById('camera-switch-btn');
+                switchBtn.disabled = true;
+                
+                updateCameraInfo('Switching camera...');
+                
+                // Properly stop current scanner
+                if (html5Qrcode && isScanning) {
+                    await html5Qrcode.stop();
+                    html5Qrcode = null;
+                    isScanning = false;
+                }
+                
+                // Switch to next camera
+                currentCameraIndex = (currentCameraIndex + 1) % cameras.length;
+                const currentCamera = cameras[currentCameraIndex];
+                
+                // Get camera type for display
+                const cameraType = getCameraType(currentCamera);
+                updateCameraInfo(`Switching to ${cameraType} camera`);
+                
+                // Wait a bit before starting new camera
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Start with new camera
+                await startScanner();
+                
+                // Re-enable switch button
+                switchBtn.disabled = false;
+                
+            } catch (error) {
+                console.error('Error switching camera:', error);
+                showStatus('❌ Error switching camera: ' + error.message, 'error');
+                
+                // Reset UI state
+                isScanning = false;
+                document.getElementById('start-btn').classList.remove('hidden');
+                document.getElementById('stop-btn').classList.add('hidden');
+                document.getElementById('qr-reader').innerHTML = '<div class="scanner-placeholder">Click "Start Scanning" to begin</div>';
+                
+                // Re-enable switch button
+                document.getElementById('camera-switch-btn').disabled = false;
             }
-            
-            // Switch to next camera
-            currentCameraIndex = (currentCameraIndex + 1) % cameras.length;
-            const currentCamera = cameras[currentCameraIndex];
-            
-            // Get camera type for display
-            const cameraType = getCameraType(currentCamera);
-            updateCameraInfo(`Switching to ${cameraType} camera`);
-            
-            // Restart scanner with new camera
-            setTimeout(() => {
-                startScanner();
-            }, 500);
         }
 
         // Get camera type for display
@@ -516,12 +543,17 @@
                     await getCameras();
                 }
 
-                // Initialize Html5Qrcode instance
+                // Ensure any existing scanner is properly stopped
                 if (html5Qrcode) {
-                    await html5Qrcode.stop();
+                    try {
+                        await html5Qrcode.stop();
+                    } catch (e) {
+                        console.log('Scanner was already stopped');
+                    }
                     html5Qrcode = null;
                 }
 
+                // Create new Html5Qrcode instance
                 html5Qrcode = new Html5Qrcode("qr-reader");
 
                 // Get current camera
@@ -558,6 +590,16 @@
             } catch (error) {
                 console.error('Scanner start error:', error);
                 
+                // Clean up on error
+                if (html5Qrcode) {
+                    try {
+                        await html5Qrcode.stop();
+                    } catch (e) {
+                        // Ignore cleanup errors
+                    }
+                    html5Qrcode = null;
+                }
+                
                 // Show error UI
                 document.getElementById('camera-error').style.display = 'block';
                 showStatus('❌ Failed to start camera: ' + error.message, 'error');
@@ -584,10 +626,14 @@
             if (html5Qrcode && isScanning) {
                 try {
                     await html5Qrcode.stop();
+                    html5Qrcode = null;
                     document.getElementById('qr-reader').innerHTML = '<div class="scanner-placeholder">Scanner stopped</div>';
                     showStatus('⏹️ Scanner stopped', 'success');
                 } catch (error) {
                     console.error('Error stopping scanner:', error);
+                    // Force cleanup even if stop() fails
+                    html5Qrcode = null;
+                    document.getElementById('qr-reader').innerHTML = '<div class="scanner-placeholder">Scanner stopped</div>';
                 }
             }
             
