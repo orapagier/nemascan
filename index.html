@@ -54,6 +54,27 @@
             box-shadow: 0 10px 20px rgba(0,0,0,0.1);
         }
 
+        /* Hide the default camera selector dropdown */
+        #qr-reader select {
+            display: none !important;
+        }
+
+        #qr-reader button {
+            display: none !important;
+        }
+
+        #qr-reader__dashboard {
+            display: none !important;
+        }
+
+        #qr-reader__dashboard_section {
+            display: none !important;
+        }
+
+        #qr-reader__dashboard_section_csr {
+            display: none !important;
+        }
+
         .scanner-controls {
             display: flex;
             gap: 10px;
@@ -339,9 +360,9 @@
             <div id="qr-reader"></div>
             
             <div class="scanner-controls">
-                <button class="btn" id="start-btn" onclick="startScanner()">Start Scanner</button>
-                <button class="btn secondary hidden" id="stop-btn" onclick="stopScanner()">Stop Scanner</button>
-                <button class="btn secondary hidden" id="camera-switch-btn" onclick="switchCamera()">🔄 Switch Camera</button>
+                <button class="btn" id="start-btn" onclick="startScanner()">📷 Start Scanning</button>
+                <button class="btn danger hidden" id="stop-btn" onclick="stopScanner()">⏹️ Stop Scanning</button>
+                <button class="btn secondary" id="camera-switch-btn" onclick="switchCamera()">🔄 Switch Camera</button>
             </div>
         </div>
 
@@ -465,10 +486,39 @@
                 showZoomSliderIfSupported: true,
                 defaultZoomValueIfSupported: 2,
                 disableFlip: false,
-                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
+                showViewfinder: true,
+                verbose: false
             };
 
             html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", config, false);
+            
+            // Hide the built-in UI elements after initialization
+            setTimeout(() => {
+                hideBuiltInControls();
+            }, 100);
+        }
+
+        // Hide built-in camera controls
+        function hideBuiltInControls() {
+            const selectors = [
+                '#qr-reader select',
+                '#qr-reader button',
+                '#qr-reader__dashboard',
+                '#qr-reader__dashboard_section',
+                '#qr-reader__dashboard_section_csr',
+                '#qr-reader__scan_region__camera_selection',
+                '#qr-reader__cam_qr_result'
+            ];
+            
+            selectors.forEach(selector => {
+                const elements = document.querySelectorAll(selector);
+                elements.forEach(el => {
+                    if (el) {
+                        el.style.display = 'none';
+                    }
+                });
+            });
         }
 
         // Switch camera
@@ -543,16 +593,16 @@
                     cameraId
                 );
                 
+                // Hide built-in controls after render
+                setTimeout(() => {
+                    hideBuiltInControls();
+                }, 500);
+                
                 isScanning = true;
                 
-                // Update UI
+                // Update UI - show stop button, hide start button
                 document.getElementById('start-btn').classList.add('hidden');
                 document.getElementById('stop-btn').classList.remove('hidden');
-                
-                // Show camera switch button only if multiple cameras
-                if (cameras.length > 1) {
-                    document.getElementById('camera-switch-btn').classList.remove('hidden');
-                }
                 
                 showStatus(`📷 Scanner active (${cameraType}) - point at QR code`, 'success');
                 
@@ -566,7 +616,6 @@
                 // Reset UI state
                 document.getElementById('start-btn').classList.remove('hidden');
                 document.getElementById('stop-btn').classList.add('hidden');
-                document.getElementById('camera-switch-btn').classList.add('hidden');
                 isScanning = false;
             }
         }
@@ -604,7 +653,6 @@
         function updateUI() {
             document.getElementById('start-btn').classList.remove('hidden');
             document.getElementById('stop-btn').classList.add('hidden');
-            document.getElementById('camera-switch-btn').classList.add('hidden');
         }
 
         // Handle scan failure (not necessarily an error)
