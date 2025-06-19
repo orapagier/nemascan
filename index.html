@@ -51,25 +51,24 @@
     <div class="modal-overlay" id="uniform-modal">
         <div class="modal">
             <div class="modal-header">
-                <h3>👔 Uniform Compliance</h3>
+                <h3>Uniform Compliance Check</h3>
                 <button class="modal-close" onclick="closeModal('uniform-modal')">&times;</button>
             </div>
             <div class="modal-content">
                 <p style="text-align: center; margin-bottom: 15px; color: #666;">
                     Selected: <strong id="selected-name-display"></strong>
                 </p>
+                <p style="text-align: center; margin-bottom: 20px; font-size: 16px;">
+                    Are you wearing the prescribed uniform for today?
+                </p>
                 <div class="uniform-options">
-                    <button class="uniform-btn compliant" onclick="selectUniform('Compliant', this)">
+                    <button class="uniform-btn compliant" onclick="selectUniform('Yes', this)">
                         <span class="emoji">✅</span>
-                        <span>Compliant</span>
+                        <span>Yes</span>
                     </button>
-                    <button class="uniform-btn non-compliant" onclick="selectUniform('Non-compliant', this)">
+                    <button class="uniform-btn non-compliant" onclick="selectUniform('No', this)">
                         <span class="emoji">❌</span>
-                        <span>Non-compliant</span>
-                    </button>
-                    <button class="uniform-btn partial" onclick="selectUniform('Partial', this)">
-                        <span class="emoji">⚠️</span>
-                        <span>Partial</span>
+                        <span>No</span>
                     </button>
                     <button class="uniform-btn excused" onclick="selectUniform('Excused', this)">
                         <span class="emoji">📝</span>
