@@ -367,7 +367,6 @@
             }, 100);
         }
     
-        // Submit record - Modified to only save selected name
         function submitRecord() {
             if (!selectedName || !selectedUniform) {
                 showToast('Please complete selection', 'error');
@@ -378,8 +377,7 @@
             
             const params = new URLSearchParams({
                 action: 'save',
-                date: new Date().toLocaleDateString(),
-                time: new Date().toLocaleTimeString(),
+                qrData: currentQRData,
                 selectedName: selectedName,
                 uniformCompliance: selectedUniform
             });
@@ -389,31 +387,33 @@
                 .then(data => {
                     if (data.success) {
                         showToast(data.message, 'success');
+                        resetForm(); // Moved inside success handler
                     } else {
                         showToast(data.error, 'error');
+                        resetForm(); // Also reset on error
                     }
                 })
                 .catch(error => {
                     showToast('Error saving record', 'error');
                     console.error(error);
+                    resetForm(); // Also reset on fetch error
                 })
                 .finally(() => {
-                    closeModalSafely('uniform-modal');
-                    resetForm();
                     showLoading(false, 'uniform-modal');
                 });
         }
     
-        // Safe modal closing function
         function closeModalSafely(modalId) {
             try {
                 const modal = document.getElementById(modalId);
                 if (modal) {
                     modal.classList.remove('active');
                     document.body.style.overflow = '';
+                    // Ensure loading is hidden when closing
+                    showLoading(false, modalId);
                 }
             } catch (e) {
-                console.log('Error closing modal:', e);
+                console.error('Error closing modal:', e);
             }
         }
     
@@ -443,20 +443,39 @@
             }
         });
     
-        // Reset form
         function resetForm() {
-            document.getElementById('scan-result').style.display = 'none';
-            
+            // Clear all variables
             currentQRData = '';
             selectedName = '';
             selectedUniform = '';
             
-            // Auto-restart scanner after successful submission
+            // Reset UI elements
+            document.getElementById('scan-result').style.display = 'none';
+            
+            // Clear any selected buttons in name modal
+            document.querySelectorAll('.name-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            // Clear any selected buttons in uniform modal
+            document.querySelectorAll('.uniform-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            // Ensure loading states are hidden
+            showLoading(false, 'name-modal');
+            showLoading(false, 'uniform-modal');
+            
+            // Close any open modals
+            closeModalSafely('name-modal');
+            closeModalSafely('uniform-modal');
+            
+            // Restart scanner after a brief delay
             setTimeout(() => {
                 if (!isScanning) {
                     startScanner();
                 }
-            }, 2000);
+            }, 1000);
         }
     
         // Show loading state in modal
