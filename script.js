@@ -211,22 +211,24 @@
             // Stop scanner silently
             stopScanner();
             
-            // Only show success notification
-            showToast('QR Code scanned!', 'success', 2000);
-            
             // Process the QR data
             processQRData(decodedText);
         }
+
+        function showSpinner(show) {
+            const spinner = document.getElementById('qr-processing-spinner');
+            spinner.style.display = show ? 'block' : 'none';
+        }
+
     
         function processQRData(qrData) {
             currentQRData = qrData;
-            showLoading(true, 'name-modal');
+            showSpinner(true); // Show spinner when processing starts
             
             fetch(`${API_URL}?action=parse&qrData=${encodeURIComponent(qrData)}`)
                 .then(response => response.json())
                 .then(data => {
-                    showLoading(false, 'name-modal');
-                    
+                    showSpinner(false); // Hide spinner when done
                     if (data.success) {
                         if (data.multipleNames) {
                             displayNameSelection(data.names);
@@ -236,15 +238,13 @@
                         }
                     } else {
                         showToast(data.error || 'Invalid QR code', 'error');
-                        // Auto-restart scanner after error
                         setTimeout(startScanner, 1000);
                     }
                 })
                 .catch(error => {
-                    showLoading(false, 'name-modal');
+                    showSpinner(false); // Hide spinner on error
                     showToast('Scanning error', 'error');
                     console.error(error);
-                    // Auto-restart scanner after error
                     setTimeout(startScanner, 1000);
                 });
         }
@@ -406,6 +406,7 @@
         });
     
         function resetForm() {
+            showSpinner(false); // Ensure spinner is hidden when resetting
             // Clear all variables
             currentQRData = '';
             selectedName = '';
