@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multi-Name QR Scanner</title>
+    <title>QR Code Scanner - Multi Name</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qr-scanner/1.4.2/qr-scanner.umd.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -15,222 +16,357 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
             padding: 20px;
         }
 
         .container {
+            max-width: 500px;
+            margin: 0 auto;
             background: white;
             border-radius: 20px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            padding: 30px;
-            max-width: 500px;
-            width: 100%;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
             text-align: center;
         }
 
-        h1 {
-            color: #333;
-            margin-bottom: 30px;
-            font-size: 2rem;
+        .header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
         }
 
-        .scan-section {
-            margin-bottom: 30px;
+        .scanner-section {
+            padding: 20px;
+            text-align: center;
         }
 
-        #qrInput {
+        #qr-reader {
             width: 100%;
-            padding: 15px;
-            border: 2px solid #e1e5e9;
-            border-radius: 10px;
-            font-size: 16px;
-            margin-bottom: 15px;
-            transition: border-color 0.3s;
+            max-width: 400px;
+            margin: 0 auto 20px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
         }
 
-        #qrInput:focus {
-            outline: none;
-            border-color: #667eea;
+        .scanner-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
         }
 
         .btn {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 15px 30px;
-            border-radius: 10px;
-            font-size: 16px;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 14px;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            margin: 10px;
+            transition: all 0.3s;
+            font-weight: 600;
             min-width: 120px;
         }
 
         .btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
         }
 
         .btn:disabled {
             background: #ccc;
             cursor: not-allowed;
             transform: none;
+            box-shadow: none;
+        }
+
+        .btn.secondary {
+            background: #6c757d;
+        }
+
+        .btn.success {
+            background: #28a745;
+        }
+
+        .btn.danger {
+            background: #dc3545;
+        }
+
+        .btn.hidden {
+            display: none;
+        }
+
+        .scan-result {
+            margin: 20px;
+            padding: 15px;
+            background: #e8f4fd;
+            border-radius: 10px;
+            border-left: 4px solid #2196F3;
+            display: none;
+        }
+
+        .scan-result h3 {
+            color: #1976D2;
+            margin-bottom: 10px;
+        }
+
+        .scan-result p {
+            color: #424242;
+            word-break: break-all;
+            font-size: 14px;
         }
 
         .name-selection {
-            margin: 20px 0;
+            margin: 20px;
             padding: 20px;
             background: #f8f9fa;
-            border-radius: 10px;
+            border-radius: 15px;
             display: none;
+        }
+
+        .name-selection h3 {
+            color: #333;
+            margin-bottom: 15px;
+            text-align: center;
         }
 
         .name-list {
             display: grid;
-            gap: 10px;
+            gap: 12px;
             margin: 15px 0;
         }
 
         .name-btn {
             background: white;
             border: 2px solid #e1e5e9;
-            padding: 15px;
-            border-radius: 10px;
+            padding: 15px 20px;
+            border-radius: 12px;
             cursor: pointer;
             transition: all 0.3s;
             font-size: 16px;
+            font-weight: 500;
+            text-align: left;
+            position: relative;
         }
 
         .name-btn:hover {
             border-color: #667eea;
-            background: #f0f4ff;
+            background: #f8f9ff;
+            transform: translateY(-1px);
         }
 
         .name-btn.selected {
-            background: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border-color: #667eea;
             color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+        }
+
+        .name-btn.selected::after {
+            content: '✓';
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-weight: bold;
+            font-size: 18px;
         }
 
         .uniform-section {
-            margin: 20px 0;
+            margin: 20px;
             padding: 20px;
             background: #f8f9fa;
-            border-radius: 10px;
+            border-radius: 15px;
             display: none;
+        }
+
+        .uniform-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            text-align: center;
         }
 
         .uniform-options {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 10px;
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            gap: 12px;
             margin: 15px 0;
         }
 
         .uniform-btn {
             background: white;
             border: 2px solid #e1e5e9;
-            padding: 10px 15px;
-            border-radius: 8px;
+            padding: 12px 8px;
+            border-radius: 10px;
             cursor: pointer;
             transition: all 0.3s;
-            font-size: 14px;
+            font-size: 13px;
+            font-weight: 500;
+            text-align: center;
         }
 
         .uniform-btn:hover {
-            border-color: #28a745;
-            background: #f0fff4;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
 
-        .uniform-btn.selected {
-            background: #28a745;
+        .uniform-btn.compliant:hover,
+        .uniform-btn.compliant.selected {
             border-color: #28a745;
+            background: #28a745;
             color: white;
         }
 
-        .uniform-btn.non-compliant {
-            border-color: #dc3545;
-            background: #fff5f5;
-        }
-
-        .uniform-btn.non-compliant:hover {
-            border-color: #dc3545;
-            background: #ffe6e6;
-        }
-
+        .uniform-btn.non-compliant:hover,
         .uniform-btn.non-compliant.selected {
-            background: #dc3545;
             border-color: #dc3545;
+            background: #dc3545;
+            color: white;
+        }
+
+        .uniform-btn.partial:hover,
+        .uniform-btn.partial.selected {
+            border-color: #ffc107;
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .uniform-btn.excused:hover,
+        .uniform-btn.excused.selected {
+            border-color: #17a2b8;
+            background: #17a2b8;
             color: white;
         }
 
         .status {
-            margin: 20px 0;
+            margin: 20px;
             padding: 15px;
             border-radius: 10px;
-            font-weight: bold;
+            font-weight: 600;
+            text-align: center;
             display: none;
         }
 
         .status.success {
             background: #d4edda;
             color: #155724;
-            border: 1px solid #c3e6cb;
+            border: 2px solid #c3e6cb;
         }
 
         .status.error {
             background: #f8d7da;
             color: #721c24;
-            border: 1px solid #f5c6cb;
+            border: 2px solid #f5c6cb;
         }
 
         .loading {
             display: none;
-            margin: 20px 0;
+            text-align: center;
+            padding: 30px;
         }
 
         .spinner {
             border: 4px solid #f3f3f3;
             border-top: 4px solid #667eea;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            width: 50px;
+            height: 50px;
             animation: spin 1s linear infinite;
-            margin: 0 auto;
+            margin: 0 auto 15px;
         }
 
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        .camera-error {
+            background: #fff3cd;
+            color: #856404;
+            border: 2px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px;
+            text-align: center;
+            display: none;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                margin: 10px;
+                border-radius: 15px;
+            }
+            
+            .scanner-controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 200px;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🎯 QR Attendance Scanner</h1>
+        <div class="header">
+            <h1>📱 QR Scanner</h1>
+            <p>Scan QR code for attendance</p>
+        </div>
         
-        <div class="scan-section">
-            <input type="text" id="qrInput" placeholder="Scan or enter QR code data..." autofocus>
-            <button class="btn" onclick="processQRCode()">Process QR Code</button>
-        </div>
-
-        <div class="name-selection" id="nameSelection">
-            <h3>Select Name:</h3>
-            <div class="name-list" id="nameList"></div>
-        </div>
-
-        <div class="uniform-section" id="uniformSection">
-            <h3>Uniform Compliance Check:</h3>
-            <div class="uniform-options">
-                <button class="uniform-btn" onclick="selectUniform('Compliant')">✅ Compliant</button>
-                <button class="uniform-btn non-compliant" onclick="selectUniform('Non-compliant')">❌ Non-compliant</button>
-                <button class="uniform-btn" onclick="selectUniform('Partial')">⚠️ Partial</button>
-                <button class="uniform-btn" onclick="selectUniform('Excused')">📝 Excused</button>
+        <div class="scanner-section">
+            <div id="qr-reader"></div>
+            
+            <div class="scanner-controls">
+                <button class="btn" id="start-btn" onclick="startScanner()">Start Scanner</button>
+                <button class="btn secondary hidden" id="stop-btn" onclick="stopScanner()">Stop Scanner</button>
             </div>
-            <button class="btn" id="submitBtn" onclick="submitRecord()" disabled>Submit Record</button>
+        </div>
+
+        <div class="camera-error" id="camera-error">
+            <h4>📷 Camera Access Error</h4>
+            <p>Unable to access camera. Please check camera permissions and try again.</p>
+        </div>
+
+        <div class="scan-result" id="scan-result">
+            <h3>✅ QR Code Scanned</h3>
+            <p id="scanned-data"></p>
+        </div>
+
+        <div class="name-selection" id="name-selection">
+            <h3>👥 Select Name</h3>
+            <div class="name-list" id="name-list"></div>
+        </div>
+
+        <div class="uniform-section" id="uniform-section">
+            <h3>👔 Uniform Compliance</h3>
+            <div class="uniform-options">
+                <button class="uniform-btn compliant" onclick="selectUniform('Compliant', this)">
+                    ✅<br>Compliant
+                </button>
+                <button class="uniform-btn non-compliant" onclick="selectUniform('Non-compliant', this)">
+                    ❌<br>Non-compliant
+                </button>
+                <button class="uniform-btn partial" onclick="selectUniform('Partial', this)">
+                    ⚠️<br>Partial
+                </button>
+                <button class="uniform-btn excused" onclick="selectUniform('Excused', this)">
+                    📝<br>Excused
+                </button>
+            </div>
+            <button class="btn success" id="submit-btn" onclick="submitRecord()" disabled>
+                💾 Save Record
+            </button>
         </div>
 
         <div class="loading" id="loading">
@@ -244,50 +380,123 @@
     <script>
         const API_URL = 'https://script.google.com/macros/s/AKfycbx0sSOg__B8UCbTzFGQmqXd0qihB5ord5hc14YFk-cY0br8d2Gp487SJ2G1t0hUoxrsVw/exec'; // Replace with your actual URL
         
+        let qrScanner = null;
         let currentQRData = '';
         let selectedName = '';
         let selectedUniform = '';
+        let isScanning = false;
 
-        // Process QR code input
-        function processQRCode() {
-            const qrData = document.getElementById('qrInput').value.trim();
-            if (!qrData) {
-                showStatus('Please enter QR code data', 'error');
-                return;
+        // Initialize QR Scanner
+        function initScanner() {
+            const qrReaderElement = document.getElementById('qr-reader');
+            
+            qrScanner = new QrScanner(
+                qrReaderElement,
+                result => onScanSuccess(result.data),
+                {
+                    onDecodeError: error => {
+                        // Silently handle decode errors - they're normal when scanning
+                    },
+                    preferredCamera: 'environment', // Use back camera on mobile
+                    highlightScanRegion: true,
+                    highlightCodeOutline: true,
+                    returnDetailedScanResult: true
+                }
+            );
+        }
+
+        // Start QR Scanner
+        async function startScanner() {
+            try {
+                showStatus('', ''); // Clear any previous status
+                
+                if (!qrScanner) {
+                    initScanner();
+                }
+
+                await qrScanner.start();
+                isScanning = true;
+                
+                // Hide start button and show stop button
+                document.getElementById('start-btn').classList.add('hidden');
+                document.getElementById('stop-btn').classList.remove('hidden');
+                document.getElementById('camera-error').style.display = 'none';
+                
+                showStatus('📷 Scanner active - point camera at QR code', 'success');
+                
+            } catch (error) {
+                console.error('Scanner start error:', error);
+                document.getElementById('camera-error').style.display = 'block';
+                showStatus('❌ Failed to start camera: ' + error.message, 'error');
+                
+                // Ensure buttons are in correct state on error
+                document.getElementById('start-btn').classList.remove('hidden');
+                document.getElementById('stop-btn').classList.add('hidden');
             }
+        }
 
+        // Stop QR Scanner
+        function stopScanner() {
+            if (qrScanner && isScanning) {
+                qrScanner.stop();
+                isScanning = false;
+                
+                // Show start button and hide stop button
+                document.getElementById('start-btn').classList.remove('hidden');
+                document.getElementById('stop-btn').classList.add('hidden');
+                
+                showStatus('⏹️ Scanner stopped', 'success');
+            }
+        }
+
+        // Handle successful QR scan
+        function onScanSuccess(decodedText) {
+            if (!isScanning) return; // Ignore if scanner is stopped
+
+            // Stop scanner after successful scan
+            stopScanner();
+            
+            // Show scanned data
+            document.getElementById('scanned-data').textContent = decodedText;
+            document.getElementById('scan-result').style.display = 'block';
+            
+            // Process the QR data
+            processQRData(decodedText);
+        }
+
+        // Process QR code data
+        function processQRData(qrData) {
             currentQRData = qrData;
             showLoading(true);
             
-            // Call API to process QR data
             fetch(`${API_URL}?qrData=${encodeURIComponent(qrData)}`)
                 .then(response => response.json())
                 .then(data => {
                     showLoading(false);
                     
                     if (data.multipleNames) {
-                        // Show name selection
                         displayNameSelection(data.names);
                     } else if (data.singleName) {
-                        // Single name, go directly to uniform check
                         selectedName = data.name;
                         showUniformSection();
                     } else if (data.error) {
-                        showStatus(data.error, 'error');
+                        showStatus('❌ ' + data.error, 'error');
+                    } else {
+                        showStatus('❌ No names found in QR code', 'error');
                     }
                 })
                 .catch(error => {
                     showLoading(false);
-                    showStatus('Error processing QR code: ' + error.message, 'error');
+                    showStatus('❌ Error processing QR code: ' + error.message, 'error');
                 });
         }
 
-        // Display name selection buttons
+        // Display name selection
         function displayNameSelection(names) {
-            const nameList = document.getElementById('nameList');
+            const nameList = document.getElementById('name-list');
             nameList.innerHTML = '';
             
-            names.forEach(name => {
+            names.forEach((name, index) => {
                 const btn = document.createElement('button');
                 btn.className = 'name-btn';
                 btn.textContent = name;
@@ -295,51 +504,46 @@
                 nameList.appendChild(btn);
             });
             
-            document.getElementById('nameSelection').style.display = 'block';
+            document.getElementById('name-selection').style.display = 'block';
+            document.getElementById('name-selection').scrollIntoView({ behavior: 'smooth' });
         }
 
         // Handle name selection
         function selectName(name, btnElement) {
-            // Remove selection from all buttons
             document.querySelectorAll('.name-btn').forEach(btn => {
                 btn.classList.remove('selected');
             });
             
-            // Select clicked button
             btnElement.classList.add('selected');
             selectedName = name;
             
-            // Show uniform section after short delay
             setTimeout(() => {
                 showUniformSection();
-            }, 500);
+            }, 300);
         }
 
-        // Show uniform compliance section
+        // Show uniform section
         function showUniformSection() {
-            document.getElementById('uniformSection').style.display = 'block';
-            document.getElementById('uniformSection').scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('uniform-section').style.display = 'block';
+            document.getElementById('uniform-section').scrollIntoView({ behavior: 'smooth' });
         }
 
         // Handle uniform selection
-        function selectUniform(compliance) {
-            // Remove selection from all buttons
+        function selectUniform(compliance, btnElement) {
             document.querySelectorAll('.uniform-btn').forEach(btn => {
                 btn.classList.remove('selected');
             });
             
-            // Select clicked button
-            event.target.classList.add('selected');
+            btnElement.classList.add('selected');
             selectedUniform = compliance;
             
-            // Enable submit button
-            document.getElementById('submitBtn').disabled = false;
+            document.getElementById('submit-btn').disabled = false;
         }
 
-        // Submit the final record
+        // Submit record
         function submitRecord() {
             if (!selectedName || !selectedUniform) {
-                showStatus('Please select name and uniform compliance', 'error');
+                showStatus('❌ Please select name and uniform compliance', 'error');
                 return;
             }
             
@@ -353,26 +557,25 @@
                     showLoading(false);
                     
                     if (data.success) {
-                        showStatus(data.message, 'success');
+                        showStatus('✅ ' + data.message, 'success');
                         resetForm();
                     } else {
-                        showStatus(data.error, 'error');
+                        showStatus('❌ ' + data.error, 'error');
                     }
                 })
                 .catch(error => {
                     showLoading(false);
-                    showStatus('Error submitting record: ' + error.message, 'error');
+                    showStatus('❌ Error submitting: ' + error.message, 'error');
                 });
         }
 
-        // Reset form after successful submission
+        // Reset form
         function resetForm() {
-            document.getElementById('qrInput').value = '';
-            document.getElementById('nameSelection').style.display = 'none';
-            document.getElementById('uniformSection').style.display = 'none';
-            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('scan-result').style.display = 'none';
+            document.getElementById('name-selection').style.display = 'none';
+            document.getElementById('uniform-section').style.display = 'none';
+            document.getElementById('submit-btn').disabled = true;
             
-            // Remove all selections
             document.querySelectorAll('.name-btn, .uniform-btn').forEach(btn => {
                 btn.classList.remove('selected');
             });
@@ -381,8 +584,12 @@
             selectedName = '';
             selectedUniform = '';
             
-            // Focus back to input
-            document.getElementById('qrInput').focus();
+            // Auto-restart scanner after successful submission
+            setTimeout(() => {
+                if (!isScanning) {
+                    startScanner();
+                }
+            }, 2000);
         }
 
         // Utility functions
@@ -390,13 +597,12 @@
             const statusDiv = document.getElementById('status');
             statusDiv.textContent = message;
             statusDiv.className = `status ${type}`;
-            statusDiv.style.display = 'block';
+            statusDiv.style.display = message ? 'block' : 'none';
             
-            // Hide after 5 seconds for success messages
-            if (type === 'success') {
+            if (type === 'success' && message) {
                 setTimeout(() => {
                     statusDiv.style.display = 'none';
-                }, 5000);
+                }, 4000);
             }
         }
 
@@ -404,10 +610,18 @@
             document.getElementById('loading').style.display = show ? 'block' : 'none';
         }
 
-        // Handle Enter key in QR input
-        document.getElementById('qrInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                processQRCode();
+        // Initialize scanner on page load
+        window.addEventListener('load', () => {
+            // Auto-start scanner if camera is available
+            setTimeout(() => {
+                startScanner();
+            }, 1000);
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (qrScanner) {
+                qrScanner.destroy();
             }
         });
     </script>
