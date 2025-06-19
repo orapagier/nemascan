@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Name QR Scanner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2rem;
+        }
+
+        .scan-section {
+            margin-bottom: 30px;
+        }
+
+        #qrInput {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            margin-bottom: 15px;
+            transition: border-color 0.3s;
+        }
+
+        #qrInput:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin: 10px;
+            min-width: 120px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .name-selection {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .name-list {
+            display: grid;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .name-btn {
+            background: white;
+            border: 2px solid #e1e5e9;
+            padding: 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 16px;
+        }
+
+        .name-btn:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .name-btn.selected {
+            background: #667eea;
+            border-color: #667eea;
+            color: white;
+        }
+
+        .uniform-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .uniform-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .uniform-btn {
+            background: white;
+            border: 2px solid #e1e5e9;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .uniform-btn:hover {
+            border-color: #28a745;
+            background: #f0fff4;
+        }
+
+        .uniform-btn.selected {
+            background: #28a745;
+            border-color: #28a745;
+            color: white;
+        }
+
+        .uniform-btn.non-compliant {
+            border-color: #dc3545;
+            background: #fff5f5;
+        }
+
+        .uniform-btn.non-compliant:hover {
+            border-color: #dc3545;
+            background: #ffe6e6;
+        }
+
+        .uniform-btn.non-compliant.selected {
+            background: #dc3545;
+            border-color: #dc3545;
+            color: white;
+        }
+
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: bold;
+            display: none;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .loading {
+            display: none;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 QR Attendance Scanner</h1>
+        
+        <div class="scan-section">
+            <input type="text" id="qrInput" placeholder="Scan or enter QR code data..." autofocus>
+            <button class="btn" onclick="processQRCode()">Process QR Code</button>
+        </div>
+
+        <div class="name-selection" id="nameSelection">
+            <h3>Select Name:</h3>
+            <div class="name-list" id="nameList"></div>
+        </div>
+
+        <div class="uniform-section" id="uniformSection">
+            <h3>Uniform Compliance Check:</h3>
+            <div class="uniform-options">
+                <button class="uniform-btn" onclick="selectUniform('Compliant')">✅ Compliant</button>
+                <button class="uniform-btn non-compliant" onclick="selectUniform('Non-compliant')">❌ Non-compliant</button>
+                <button class="uniform-btn" onclick="selectUniform('Partial')">⚠️ Partial</button>
+                <button class="uniform-btn" onclick="selectUniform('Excused')">📝 Excused</button>
+            </div>
+            <button class="btn" id="submitBtn" onclick="submitRecord()" disabled>Submit Record</button>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Processing...</p>
+        </div>
+
+        <div class="status" id="status"></div>
+    </div>
+
+    <script>
+        const API_URL = 'https://script.google.com/macros/s/AKfycbx0sSOg__B8UCbTzFGQmqXd0qihB5ord5hc14YFk-cY0br8d2Gp487SJ2G1t0hUoxrsVw/exec'; // Replace with your actual URL
+        
+        let currentQRData = '';
+        let selectedName = '';
+        let selectedUniform = '';
+
+        // Process QR code input
+        function processQRCode() {
+            const qrData = document.getElementById('qrInput').value.trim();
+            if (!qrData) {
+                showStatus('Please enter QR code data', 'error');
+                return;
+            }
+
+            currentQRData = qrData;
+            showLoading(true);
+            
+            // Call API to process QR data
+            fetch(`${API_URL}?qrData=${encodeURIComponent(qrData)}`)
+                .then(response => response.json())
+                .then(data => {
+                    showLoading(false);
+                    
+                    if (data.multipleNames) {
+                        // Show name selection
+                        displayNameSelection(data.names);
+                    } else if (data.singleName) {
+                        // Single name, go directly to uniform check
+                        selectedName = data.name;
+                        showUniformSection();
+                    } else if (data.error) {
+                        showStatus(data.error, 'error');
+                    }
+                })
+                .catch(error => {
+                    showLoading(false);
+                    showStatus('Error processing QR code: ' + error.message, 'error');
+                });
+        }
+
+        // Display name selection buttons
+        function displayNameSelection(names) {
+            const nameList = document.getElementById('nameList');
+            nameList.innerHTML = '';
+            
+            names.forEach(name => {
+                const btn = document.createElement('button');
+                btn.className = 'name-btn';
+                btn.textContent = name;
+                btn.onclick = () => selectName(name, btn);
+                nameList.appendChild(btn);
+            });
+            
+            document.getElementById('nameSelection').style.display = 'block';
+        }
+
+        // Handle name selection
+        function selectName(name, btnElement) {
+            // Remove selection from all buttons
+            document.querySelectorAll('.name-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            // Select clicked button
+            btnElement.classList.add('selected');
+            selectedName = name;
+            
+            // Show uniform section after short delay
+            setTimeout(() => {
+                showUniformSection();
+            }, 500);
+        }
+
+        // Show uniform compliance section
+        function showUniformSection() {
+            document.getElementById('uniformSection').style.display = 'block';
+            document.getElementById('uniformSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Handle uniform selection
+        function selectUniform(compliance) {
+            // Remove selection from all buttons
+            document.querySelectorAll('.uniform-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            // Select clicked button
+            event.target.classList.add('selected');
+            selectedUniform = compliance;
+            
+            // Enable submit button
+            document.getElementById('submitBtn').disabled = false;
+        }
+
+        // Submit the final record
+        function submitRecord() {
+            if (!selectedName || !selectedUniform) {
+                showStatus('Please select name and uniform compliance', 'error');
+                return;
+            }
+            
+            showLoading(true);
+            
+            const url = `${API_URL}?qrData=${encodeURIComponent(currentQRData)}&selectedName=${encodeURIComponent(selectedName)}&uniformCompliance=${encodeURIComponent(selectedUniform)}`;
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    showLoading(false);
+                    
+                    if (data.success) {
+                        showStatus(data.message, 'success');
+                        resetForm();
+                    } else {
+                        showStatus(data.error, 'error');
+                    }
+                })
+                .catch(error => {
+                    showLoading(false);
+                    showStatus('Error submitting record: ' + error.message, 'error');
+                });
+        }
+
+        // Reset form after successful submission
+        function resetForm() {
+            document.getElementById('qrInput').value = '';
+            document.getElementById('nameSelection').style.display = 'none';
+            document.getElementById('uniformSection').style.display = 'none';
+            document.getElementById('submitBtn').disabled = true;
+            
+            // Remove all selections
+            document.querySelectorAll('.name-btn, .uniform-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            currentQRData = '';
+            selectedName = '';
+            selectedUniform = '';
+            
+            // Focus back to input
+            document.getElementById('qrInput').focus();
+        }
+
+        // Utility functions
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+            statusDiv.style.display = 'block';
+            
+            // Hide after 5 seconds for success messages
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        // Handle Enter key in QR input
+        document.getElementById('qrInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                processQRCode();
+            }
+        });
+    </script>
+</body>
+</html>
