@@ -135,18 +135,84 @@
             font-size: 14px;
         }
 
-        .name-selection {
-            margin: 20px;
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
             padding: 20px;
-            background: #f8f9fa;
-            border-radius: 15px;
-            display: none;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
         }
 
-        .name-selection h3 {
-            color: #333;
-            margin-bottom: 15px;
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 20px;
+            max-width: 400px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            transform: scale(0.9) translateY(20px);
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1) translateY(0);
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 20px 20px 0 0;
             text-align: center;
+            position: relative;
+        }
+
+        .modal-header h3 {
+            font-size: 1.3rem;
+            margin: 0;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .modal-content {
+            padding: 20px;
         }
 
         .name-list {
@@ -192,23 +258,9 @@
             font-size: 18px;
         }
 
-        .uniform-section {
-            margin: 20px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 15px;
-            display: none;
-        }
-
-        .uniform-section h3 {
-            color: #333;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-
         .uniform-options {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            grid-template-columns: repeat(2, 1fr);
             gap: 12px;
             margin: 15px 0;
         }
@@ -216,17 +268,23 @@
         .uniform-btn {
             background: white;
             border: 2px solid #e1e5e9;
-            padding: 12px 8px;
-            border-radius: 10px;
+            padding: 15px 10px;
+            border-radius: 12px;
             cursor: pointer;
             transition: all 0.3s;
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 500;
             text-align: center;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
         .uniform-btn:hover {
-            transform: translateY(-1px);
+            transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
 
@@ -256,6 +314,21 @@
             border-color: #17a2b8;
             background: #17a2b8;
             color: white;
+        }
+
+        .uniform-btn .emoji {
+            font-size: 24px;
+        }
+
+        .modal-actions {
+            padding: 0 20px 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-actions .btn {
+            flex: 1;
+            margin: 0;
         }
 
         .status {
@@ -337,6 +410,15 @@
                 width: 100%;
                 max-width: 200px;
             }
+
+            .modal {
+                margin: 10px;
+                max-height: 90vh;
+            }
+
+            .uniform-options {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -375,38 +457,66 @@
             <p id="scanned-data"></p>
         </div>
 
-        <div class="name-selection" id="name-selection">
-            <h3>👥 Select Name</h3>
-            <div class="name-list" id="name-list"></div>
-        </div>
-
-        <div class="uniform-section" id="uniform-section">
-            <h3>👔 Uniform Compliance</h3>
-            <div class="uniform-options">
-                <button class="uniform-btn compliant" onclick="selectUniform('Compliant', this)">
-                    ✅<br>Compliant
-                </button>
-                <button class="uniform-btn non-compliant" onclick="selectUniform('Non-compliant', this)">
-                    ❌<br>Non-compliant
-                </button>
-                <button class="uniform-btn partial" onclick="selectUniform('Partial', this)">
-                    ⚠️<br>Partial
-                </button>
-                <button class="uniform-btn excused" onclick="selectUniform('Excused', this)">
-                    📝<br>Excused
-                </button>
-            </div>
-            <button class="btn success" id="submit-btn" onclick="submitRecord()" disabled>
-                💾 Save Record
-            </button>
-        </div>
-
         <div class="loading" id="loading">
             <div class="spinner"></div>
             <p>Processing...</p>
         </div>
 
         <div class="status" id="status"></div>
+    </div>
+
+    <!-- Name Selection Modal -->
+    <div class="modal-overlay" id="name-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>👥 Select Name</h3>
+                <button class="modal-close" onclick="closeModal('name-modal')">&times;</button>
+            </div>
+            <div class="modal-content">
+                <div class="name-list" id="name-list"></div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn secondary" onclick="closeModal('name-modal')">Cancel</button>
+                <button class="btn success" id="confirm-name-btn" onclick="confirmNameSelection()" disabled>Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Uniform Selection Modal -->
+    <div class="modal-overlay" id="uniform-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>👔 Uniform Compliance</h3>
+                <button class="modal-close" onclick="closeModal('uniform-modal')">&times;</button>
+            </div>
+            <div class="modal-content">
+                <p style="text-align: center; margin-bottom: 15px; color: #666;">
+                    Selected: <strong id="selected-name-display"></strong>
+                </p>
+                <div class="uniform-options">
+                    <button class="uniform-btn compliant" onclick="selectUniform('Compliant', this)">
+                        <span class="emoji">✅</span>
+                        <span>Compliant</span>
+                    </button>
+                    <button class="uniform-btn non-compliant" onclick="selectUniform('Non-compliant', this)">
+                        <span class="emoji">❌</span>
+                        <span>Non-compliant</span>
+                    </button>
+                    <button class="uniform-btn partial" onclick="selectUniform('Partial', this)">
+                        <span class="emoji">⚠️</span>
+                        <span>Partial</span>
+                    </button>
+                    <button class="uniform-btn excused" onclick="selectUniform('Excused', this)">
+                        <span class="emoji">📝</span>
+                        <span>Excused</span>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn secondary" onclick="closeModal('uniform-modal')">Back</button>
+                <button class="btn success" id="submit-btn" onclick="submitRecord()" disabled>💾 Save Record</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -682,7 +792,7 @@
                         displayNameSelection(data.names);
                     } else if (data.singleName) {
                         selectedName = data.name;
-                        showUniformSection();
+                        showUniformModal();
                     } else if (data.error) {
                         showStatus('❌ ' + data.error, 'error');
                     } else {
@@ -695,7 +805,7 @@
                 });
         }
 
-        // Display name selection
+        // Display name selection modal
         function displayNameSelection(names) {
             const nameList = document.getElementById('name-list');
             nameList.innerHTML = '';
@@ -708,8 +818,12 @@
                 nameList.appendChild(btn);
             });
             
-            document.getElementById('name-selection').style.display = 'block';
-            document.getElementById('name-selection').scrollIntoView({ behavior: 'smooth' });
+            // Reset selection state
+            selectedName = '';
+            document.getElementById('confirm-name-btn').disabled = true;
+            
+            // Show modal
+            showModal('name-modal');
         }
 
         // Handle name selection
@@ -721,15 +835,33 @@
             btnElement.classList.add('selected');
             selectedName = name;
             
-            setTimeout(() => {
-                showUniformSection();
-            }, 300);
+            // Enable continue button
+            document.getElementById('confirm-name-btn').disabled = false;
         }
 
-        // Show uniform section
-        function showUniformSection() {
-            document.getElementById('uniform-section').style.display = 'block';
-            document.getElementById('uniform-section').scrollIntoView({ behavior: 'smooth' });
+        // Confirm name selection and proceed to uniform modal
+        function confirmNameSelection() {
+            if (!selectedName) {
+                showStatus('❌ Please select a name', 'error');
+                return;
+            }
+            
+            closeModal('name-modal');
+            showUniformModal();
+        }
+
+        // Show uniform modal
+        function showUniformModal() {
+            document.getElementById('selected-name-display').textContent = selectedName;
+            
+            // Reset uniform selection
+            selectedUniform = '';
+            document.querySelectorAll('.uniform-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            document.getElementById('submit-btn').disabled = true;
+            
+            showModal('uniform-modal');
         }
 
         // Handle uniform selection
@@ -751,6 +883,7 @@
                 return;
             }
             
+            closeModal('uniform-modal');
             showLoading(true);
             
             const url = `${API_URL}?qrData=${encodeURIComponent(currentQRData)}&selectedName=${encodeURIComponent(selectedName)}&uniformCompliance=${encodeURIComponent(selectedUniform)}`;
@@ -773,16 +906,39 @@
                 });
         }
 
+        // Modal functions
+        function showModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.classList.remove('active');
+            document.body.style.overflow = ''; // Restore scrolling
+        }
+
+        // Close modal when clicking outside
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-overlay')) {
+                closeModal(e.target.id);
+            }
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const activeModal = document.querySelector('.modal-overlay.active');
+                if (activeModal) {
+                    closeModal(activeModal.id);
+                }
+            }
+        });
+
         // Reset form
         function resetForm() {
             document.getElementById('scan-result').style.display = 'none';
-            document.getElementById('name-selection').style.display = 'none';
-            document.getElementById('uniform-section').style.display = 'none';
-            document.getElementById('submit-btn').disabled = true;
-            
-            document.querySelectorAll('.name-btn, .uniform-btn').forEach(btn => {
-                btn.classList.remove('selected');
-            });
             
             currentQRData = '';
             selectedName = '';
@@ -790,54 +946,4 @@
             
             // Auto-restart scanner after successful submission
             setTimeout(() => {
-                if (!isScanning) {
-                    startScanner();
-                }
-            }, 2000);
-        }
-
-        // Utility functions
-        function showStatus(message, type) {
-            const statusDiv = document.getElementById('status');
-            statusDiv.textContent = message;
-            statusDiv.className = `status ${type}`;
-            statusDiv.style.display = message ? 'block' : 'none';
-            
-            if (type === 'success' && message) {
-                setTimeout(() => {
-                    statusDiv.style.display = 'none';
-                }, 4000);
-            }
-        }
-
-        function showLoading(show) {
-            document.getElementById('loading').style.display = show ? 'block' : 'none';
-        }
-
-        // Initialize when page loads
-        window.addEventListener('load', () => {
-            // Initialize cameras list but don't auto-start
-            getCameras().catch(console.error);
-        });
-
-        // Handle visibility change to restart scanner when page becomes visible
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden && !isScanning) {
-                setTimeout(() => {
-                    if (!isScanning) {
-                        // Don't auto-restart, let user click the button
-                        console.log('Page visible again, ready to start scanner');
-                    }
-                }, 500);
-            }
-        });
-
-        // Cleanup on page unload
-        window.addEventListener('beforeunload', () => {
-            if (html5Qrcode && isScanning) {
-                html5Qrcode.stop().catch(console.error);
-            }
-        });
-    </script>
-</body>
-</html>
+                if (!
