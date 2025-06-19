@@ -35,60 +35,68 @@
         </div>
     </div>
 
-    <!-- Name Selection Modal -->
-    <div class="modal-overlay" id="name-modal">
-        <div class="modal">
-            <div class="modal-header">
-                <h3>👥 Select Name</h3>
-                <button class="modal-close" onclick="closeModal('name-modal')">&times;</button>
-            </div>
-            <div class="modal-content">
-                <div class="name-list" id="name-list"></div>
-            </div>
-            <div class="modal-actions">
-                <button class="btn secondary" onclick="closeModal('name-modal')">Cancel</button>
-                <button class="btn success" id="confirm-name-btn" onclick="confirmNameSelection()" disabled>Continue</button>
+<div class="modal-overlay" id="name-modal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>👥 Select Name</h3>
+            <button class="modal-close" onclick="closeModal('name-modal')">&times;</button>
+        </div>
+        <div class="modal-content">
+            <div class="name-list" id="name-list"></div>
+            <!-- Loading spinner for name modal -->
+            <div class="modal-loading" id="name-modal-loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Loading uniform options...</p>
             </div>
         </div>
-    </div>
-
-    <!-- Uniform Selection Modal -->
-    <div class="modal-overlay" id="uniform-modal">
-        <div class="modal">
-            <div class="modal-header">
-                <h3>👔 Uniform Compliance</h3>
-                <button class="modal-close" onclick="closeModal('uniform-modal')">&times;</button>
-            </div>
-            <div class="modal-content">
-                <p style="text-align: center; margin-bottom: 15px; color: #666;">
-                    Selected: <strong id="selected-name-display"></strong>
-                </p>
-                <div class="uniform-options">
-                    <button class="uniform-btn compliant" onclick="selectUniform('Compliant', this)">
-                        <span class="emoji">✅</span>
-                        <span>Compliant</span>
-                    </button>
-                    <button class="uniform-btn non-compliant" onclick="selectUniform('Non-compliant', this)">
-                        <span class="emoji">❌</span>
-                        <span>Non-compliant</span>
-                    </button>
-                    <button class="uniform-btn partial" onclick="selectUniform('Partial', this)">
-                        <span class="emoji">⚠️</span>
-                        <span>Partial</span>
-                    </button>
-                    <button class="uniform-btn excused" onclick="selectUniform('Excused', this)">
-                        <span class="emoji">📝</span>
-                        <span>Excused</span>
-                    </button>
-                </div>
-            </div>
-            <div class="modal-actions">
-                <button class="btn secondary" onclick="closeModal('uniform-modal')">Back</button>
-                <button class="btn success" id="submit-btn" onclick="submitRecord()" disabled>💾 Save Record</button>
-            </div>
+        <div class="modal-actions">
+            <button class="btn secondary" onclick="closeModal('name-modal')">Cancel</button>
+            <!-- Removed the Continue button -->
         </div>
     </div>
+</div>
 
+<!-- Uniform Selection Modal -->
+<div class="modal-overlay" id="uniform-modal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>💼 Uniform Compliance</h3>
+            <button class="modal-close" onclick="closeModal('uniform-modal')">&times;</button>
+        </div>
+        <div class="modal-content">
+            <p style="text-align: center; margin-bottom: 15px; color: #666;">
+                Selected: <strong id="selected-name-display"></strong>
+            </p>
+            <div class="uniform-options" id="uniform-options">
+                <button class="uniform-btn compliant" onclick="selectUniform('Compliant', this)">
+                    <span class="emoji">✅</span>
+                    <span>Compliant</span>
+                </button>
+                <button class="uniform-btn non-compliant" onclick="selectUniform('Non-compliant', this)">
+                    <span class="emoji">❌</span>
+                    <span>Non-compliant</span>
+                </button>
+                <button class="uniform-btn partial" onclick="selectUniform('Partial', this)">
+                    <span class="emoji">⚠️</span>
+                    <span>Partial</span>
+                </button>
+                <button class="uniform-btn excused" onclick="selectUniform('Excused', this)">
+                    <span class="emoji">📝</span>
+                    <span>Excused</span>
+                </button>
+            </div>
+            <!-- Loading spinner for uniform modal -->
+            <div class="modal-loading" id="uniform-modal-loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Saving record...</p>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn secondary" onclick="closeModal('uniform-modal')">Back</button>
+            <!-- Removed the Save Record button -->
+        </div>
+    </div>
+</div>
     <script>
         const API_URL = 'https://script.google.com/macros/s/AKfycbx0sSOg__B8UCbTzFGQmqXd0qihB5ord5hc14YFk-cY0br8d2Gp487SJ2G1t0hUoxrsVw/exec'; // Replace with your actual URL
         
