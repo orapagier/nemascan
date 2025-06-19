@@ -331,33 +331,30 @@
             
             fetch(`${API_URL}?${params}`)
                 .then(response => {
-                    // First check if the response is OK (status 200-299)
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.text(); // First get as text
+                    // First check HTTP status
+                    if (!response.ok) throw new Error('Network error');
+                    
+                    // Handle both text and JSON responses
+                    return response.text().then(text => {
+                        try {
+                            return JSON.parse(text); // Case 1: Proper JSON
+                        } catch {
+                            return { success: text.includes("Attendance recorded") }; // Case 2: Text fallback
+                        }
+                    });
                 })
-                .then(text => {
-                    // Try to parse as JSON, fallback to text if fails
-                    try {
-                        const data = JSON.parse(text);
-                        showToast(`Recorded: ${selectedName}`, 'success');
+                .then(data => {
+                    if (data.success) {
+                        showToast(`Attendance for ${selectedName} recorded successfully`, 'success');
                         closeModalSafely('uniform-modal');
                         resetForm();
-                    } catch (e) {
-                        // Handle non-JSON responses
-                        if (text.includes("Attendance recorded")) {
-                            showToast(`Recorded: ${selectedName}`, 'success');
-                            closeModalSafely('uniform-modal');
-                            resetForm();
-                        } else {
-                            throw new Error('Unexpected response format');
-                        }
+                    } else {
+                        throw new Error('Save rejected by server');
                     }
                 })
                 .catch(error => {
                     console.error('Save error:', error);
-                    showToast('Save failed', 'error');
+                    showToast('Save failed - please try again', 'error');
                 })
                 .finally(() => {
                     showLoading(false, 'uniform-modal');
